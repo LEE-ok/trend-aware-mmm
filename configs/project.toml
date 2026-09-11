@@ -1,0 +1,11 @@
+# 후속 모듈 연결 시 읽을 설정 초안. 현재 CLI는 이 설정을 읽지 않습니다.
+[project]
+frequency = "weekly"
+target = "revenue"
+channels = ["meta", "google", "naver", "influencer"]
+currency = "KRW"
+
+[simulation]
+weekly_allocation = "uniform"
+interval_probability = 0.8
+
