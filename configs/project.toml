@@ -1,11 +1,20 @@
-# 후속 모듈 연결 시 읽을 설정 초안. 현재 CLI는 이 설정을 읽지 않습니다.
+# MMM 학습·검증용 실행 설정. CLI와 모델이 함께 읽는 값을 둡니다.
+[data]
+date_column = "wk_strt_dt"
+target = "sales"
+# 5채널 코어. 10채널 확장은 민감도 분석에서만.
+channels = ["dm", "so", "vidtr", "viddig", "sem"]
+spend_prefix = "mdsp_"
+currency = "USD"
+scope = "retrospective-simulation"
+source_note = "data_GIT.csv lineage (US retail, 2014-08-03 to 2018-07-29). License/source to be confirmed before release."
+
 [project]
 frequency = "weekly"
-target = "revenue"
-channels = ["meta", "google", "naver", "influencer"]
-currency = "KRW"
+target = "sales"
+channels = ["dm", "so", "vidtr", "viddig", "sem"]
+currency = "USD"
 
 [simulation]
 weekly_allocation = "uniform"
 interval_probability = 0.8
-
