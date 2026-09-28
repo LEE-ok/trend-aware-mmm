@@ -18,3 +18,23 @@ currency = "USD"
 [simulation]
 weekly_allocation = "uniform"
 interval_probability = 0.8
+# scenario.md section 5: total fixed, offsetting moves, non-negative.
+extrapolation_guard = "flag-outside-historical-range"
+
+[controls]
+# Standardized linear controls. Forecast holds them at recent-13w mean (assumption, documented in outputs).
+columns = ["me_gas_dpg", "me_ics_all", "st_ct"]
+forecast_rule = "recent-13w-mean"
+
+[holidays]
+# Sparse hldy_* dummies are bundled, not estimated individually.
+year_end = ["hldy_Christmas Eve", "hldy_Christmas Day", "hldy_Day after Christmas", "hldy_NYE", "hldy_New Year's Day"]
+other = "any-other-hldy"
+
+[seasonality]
+# seas_prd_* period dummies only. seas_week_* deferred.
+columns = "seas_prd_*"
+
+[priors]
+# Numeric table: docs/priors.md v1.0. ec50 fixed at train median for run 1.
+spec = "docs/priors.md"

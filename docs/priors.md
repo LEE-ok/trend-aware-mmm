@@ -76,3 +76,24 @@ lag 0~8주 탐색 결과:
 - 상관계수 및 lag 탐색 결과는 인과효과를 의미하지 않음.
 - 현재 결과는 prior 범위를 좁히기 위한 탐색 근거로만 사용함.
 - 기존 `priors.md`의 가정은 Bayesian MMM 구현 및 posterior 검증 전까지 확정값으로 간주하지 않음.
+
+
+---
+
+## Prior 수치표 v1.0 — 2026-09-28 (합의 적용)
+
+아래는 코드 구현용 확정값. EDA 상관 + 매체 상식 + 업계 표준(Hill + 비음수 계수) 반영.
+
+| 채널 | beta prior | decay prior | alpha prior | ec50 |
+|---|---|---|---|---|
+| mdsp_dm | HalfNormal(σ=5e7) | Uniform(0.3, 0.7) | Uniform(0.3, 1.5) | train 중앙값 고정 |
+| mdsp_so | HalfNormal(σ=5e7) | Uniform(0.0, 0.4) | Uniform(0.3, 1.5) | train 중앙값 고정 |
+| mdsp_vidtr | HalfNormal(σ=1.5e8) | Uniform(0.3, 0.7) | Uniform(0.3, 1.5) | train 중앙값 고정 |
+| mdsp_viddig | HalfNormal(σ=5e7) | Uniform(0.0, 0.4) | Uniform(0.3, 1.5) | train 중앙값 고정 |
+| mdsp_sem | HalfNormal(σ=1.5e8) | Uniform(0.0, 0.5) | Uniform(0.3, 1.5) | train 중앙값 고정 |
+
+- intercept: Normal(μ=train sales 평균, σ=3e7).
+- sigma_obs: HalfNormal(σ=4e7) (sales 표준편차 규모).
+- 통제·휴일·계절 계수: Normal(0, 1e7) (표준화 투입이므로 보수적).
+- ec50은 1차 실행에서 추정하지 않고 train 중앙값 고정. 2차에서 추정 전환 검토.
+- beta σ 차등 근거: EDA 상관 강도(vidtr 0.657, sem 0.586 > viddig 0.458, so 0.335 > dm 0.149).

@@ -87,3 +87,65 @@ def pearson(xs: list[float], ys: list[float]) -> float:
     if vx == 0 or vy == 0:
         return 0.0
     return cov / (vx * vy) ** 0.5
+
+
+# --- Controls / holidays / seasonality (docs/priors.md v1.0 decisions) ---
+
+CONTROL_COLUMNS = ("me_gas_dpg", "me_ics_all", "st_ct")
+YEAR_END_HOLIDAYS = (
+    "hldy_Christmas Eve",
+    "hldy_Christmas Day",
+    "hldy_Day after Christmas",
+    "hldy_NYE",
+    "hldy_New Year's Day",
+)
+
+
+def discover_columns(path: str | Path) -> dict:
+    """Group extra CSV columns by prefix. Missing groups come back empty."""
+    import csv as _csv
+
+    with Path(path).open(encoding="utf-8-sig", newline="") as stream:
+        fields = _csv.DictReader(stream).fieldnames or []
+    controls = [c for c in CONTROL_COLUMNS if c in fields]
+    holidays = [c for c in fields if c.startswith("hldy_")]
+    seasons = [c for c in fields if c.startswith("seas_prd_")]
+    return {"controls": controls, "holidays": holidays, "seasons": seasons}
+
+
+def standardize(values: list[float]) -> tuple[list[float], float, float]:
+    """Z-scores. Zero variance returns zeros with sd 0.0."""
+    n = len(values)
+    mean = sum(values) / n
+    var = sum((v - mean) ** 2 for v in values) / n
+    sd = var**0.5
+    if sd == 0:
+        return [0.0] * n, mean, 0.0
+    return [(v - mean) / sd for v in values], mean, sd
+
+
+def control_matrix(rows: list[dict], columns: tuple[str, ...] = CONTROL_COLUMNS) -> dict:
+    """Standardized control columns with (mean, sd) for forecast reuse."""
+    out: dict = {"columns": list(columns), "stats": {}, "values": []}
+    series = {c: [float(r["extras"].get(c) or 0.0) for r in rows] for c in columns}
+    zcols = {}
+    for col, vals in series.items():
+        z, mean, sd = standardize(vals)
+        zcols[col] = z
+        out["stats"][col] = {"mean": mean, "sd": sd}
+    out["values"] = [[zcols[c][i] for c in columns] for i in range(len(rows))]
+    return out
+
+
+def holiday_flags(extras: dict, holiday_columns: list[str]) -> dict:
+    """Bundle sparse holiday dummies: year-end cluster + other."""
+    present = {c for c in holiday_columns if str(extras.get(c)) == "1"}
+    return {
+        "year_end": 1.0 if present & set(YEAR_END_HOLIDAYS) else 0.0,
+        "other_holiday": 1.0 if present - set(YEAR_END_HOLIDAYS) else 0.0,
+    }
+
+
+def season_flags(extras: dict, season_columns: list[str]) -> dict:
+    """Keep seas_prd_* period dummies only (weekly dummies deferred)."""
+    return {c: 1.0 if str(extras.get(c)) == "1" else 0.0 for c in season_columns}
