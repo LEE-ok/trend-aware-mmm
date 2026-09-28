@@ -3,8 +3,9 @@
 과거 마케팅 성과와 시장 트렌드를 활용한 다음 분기 예산 시뮬레이터.
 
 ## 현재 상태
-CSV 계약 v0.2(5채널 코어: dm/so/vidtr/viddig/sem, `data_GIT.csv` 회고 시뮬레이션용)와 검증 CLI·테스트가 구현되었습니다.
-MMM 학습, 트렌드 API 수집, Vector DB, LangGraph, 예산 최적화, UI는 아직 구현되지 않았습니다.
+CSV 계약 v0.2(5채널 코어: dm/so/vidtr/viddig/sem, `data_GIT.csv` 회고 시뮬레이션용),
+전처리·베이스라인 MMM·트렌드 MVP·시간순 검증이 구현되었습니다.
+PyMC Bayesian MMM, 자동 수집, Vector DB, LangGraph, 예산 최적화, UI는 아직 구현되지 않았습니다.
 
 ## 폴더 구조
 ```text
@@ -37,7 +38,11 @@ Python 3.12 기준입니다. 저장소 루트에서 실행하세요.
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -e .
+$env:PYTHONPATH = "src"
 python -m trend_mmm validate data/sample/marketing.csv
+python -m trend_mmm eda data/raw/data_GIT.csv
+python -m trend_mmm baseline data/raw/data_GIT.csv --test-weeks 26 --out artifacts
+python -m trend_mmm trends data/sample/trends.csv
 python -m unittest discover -s tests -v
 ```
 
@@ -52,8 +57,8 @@ python -m unittest discover -s tests -v
 
 ## 다음 작업
 1. ~~업종·성과 지표·채널 확정~~ → 완료(계약 v0.2). 실제 원본은 `data/raw/`에 두고 Git 제외, 출처·라이선스 표기
-2. 실제 데이터 확보와 누락 처리 정책 결정
-3. 합성 데이터 생성 및 기본 MMM 구축
+2. ~~EDA·전처리·베이스라인·시간순 검증~~ → 완료(`docs/eda.md`, test MAPE 0.370). 예측용이 아닌 기준선
+3. 사전분포 확정(승아, `docs/priors.md` 검토) 후 PyMC Bayesian MMM
 4. 시간순 검증 후 트렌드 처리 연결
 5. 최적화·시뮬레이터·UI 연결
 

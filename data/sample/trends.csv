@@ -1,0 +1,7 @@
+source_url,published_at,collected_at,category,score
+https://example.com/back-to-school,2014-08-04,2014-08-05,seasonal-demand,0.6
+https://example.com/labor-day-preview,2014-08-06,2014-08-07,holiday-anticipation,0.4
+https://example.com/tv-sports-season,2014-08-12,2014-08-13,media-event,0.7
+https://example.com/search-interest-report,2014-08-14,2014-08-15,search-interest,0.5
+https://example.com/social-buzz-weekly,2014-08-20,2014-08-21,social-buzz,0.8
+https://example.com/promo-calendar-leak,2014-08-26,2014-08-27,promotion,0.3
