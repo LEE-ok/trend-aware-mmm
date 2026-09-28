@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from .data.preprocess import (
+    aux_matrix,
     control_matrix,
     discover_columns,
     holiday_flags,
@@ -84,34 +85,9 @@ def cmd_trends(args):
         print(f"{week}: n={cell['n_docs']} mean_score={cell['mean_score']:.3f}")
 
 
-def _aux_matrix(rows, groups):
-    """Standardized controls + bundled holidays + seas_prd (first dropped)."""
-    parts, names = [], []
-    if groups["controls"]:
-        cm = control_matrix(rows, tuple(groups["controls"]))
-        parts.append(np.asarray(cm["values"], dtype=float))
-        names.extend(f"ctrl_{c}" for c in cm["columns"])
-    hol = np.array(
-        [
-            [holiday_flags(r["extras"], groups["holidays"])["year_end"],
-             holiday_flags(r["extras"], groups["holidays"])["other_holiday"]]
-            for r in rows
-        ]
-    )
-    if groups["holidays"]:
-        parts.append(hol)
-        names.extend(["hol_year_end", "hol_other"])
-    seas_cols = groups["seasons"][1:]
-    if seas_cols:
-        parts.append(
-            np.array(
-                [[season_flags(r["extras"], seas_cols)[c] for c in seas_cols] for r in rows]
-            )
-        )
-        names.extend(f"seas_{c}" for c in seas_cols)
-    if not parts:
-        return None, []
-    return np.hstack(parts), names
+def _aux_matrix(rows, groups, control_stats=None):
+    """Stable-order aux matrix shared by train and forecast paths."""
+    return aux_matrix(rows, groups, control_stats=control_stats)
 
 
 def cmd_bayes(args):
@@ -121,8 +97,8 @@ def cmd_bayes(args):
     extras = tuple(groups["controls"] + groups["holidays"] + groups["seasons"])
     rows = load_weekly(args.path, extra=extras)
     train, test = time_split(rows, test_weeks=args.test_weeks)
-    train_aux, aux_names = _aux_matrix(train, groups)
-    test_aux, _ = _aux_matrix(test, groups)
+    train_aux, aux_names, train_stats = _aux_matrix(train, groups)
+    test_aux, _, _ = _aux_matrix(test, groups, control_stats=train_stats)
     idata, bundle = fit_bayesian(
         train, SPEND_COLUMNS, aux=train_aux,
         draws=args.draws, tune=args.tune, chains=args.chains,
@@ -163,6 +139,73 @@ def cmd_bayes(args):
     print(f"saved: {out / 'bayes_summary.json'}")
 
 
+def cmd_scenarios(args):
+    import arviz as az
+
+    from .simulation.evaluate import evaluate, marginal_roas, scenario_defs
+
+    groups = discover_columns(args.path)
+    extras = tuple(groups["controls"] + groups["holidays"] + groups["seasons"])
+    rows = load_weekly(args.path, extra=extras)
+    train, _ = time_split(rows, test_weeks=26)
+    _, _, train_stats = _aux_matrix(train, groups)
+    recent = rows[-args.weeks :]
+    total = sum(sum(r["spends"][ch] for ch in SPEND_COLUMNS) for r in recent)
+    recent_aux, _, _ = _aux_matrix(recent, groups, control_stats=train_stats)
+    aux_mean = np.asarray(recent_aux, dtype=float).mean(axis=0)
+    from .simulation.scenarios import historical_ranges as _ranges
+
+    ranges = _ranges(rows, SPEND_COLUMNS)
+    idata = az.from_netcdf(args.trace)
+    post = idata.posterior
+    n = post.sizes["chain"] * post.sizes["draw"]
+    draws = []
+    flat = {v: post[v].values.reshape(n, -1) for v in post.data_vars}
+    for i in range(n):
+        draw = {}
+        for ch in SPEND_COLUMNS:
+            draw[f"beta_{ch}"] = float(flat[f"beta_{ch}"][i, 0])
+            draw[f"decay_{ch}"] = float(flat[f"decay_{ch}"][i, 0])
+            draw[f"alpha_{ch}"] = float(flat[f"alpha_{ch}"][i, 0])
+        draw["intercept"] = float(flat["intercept"][i, 0])
+        if "gamma" in flat:
+            draw["gamma"] = flat["gamma"][i]
+        draws.append(draw)
+    bundle = json.loads(
+        Path(args.trace).with_name("bayes_summary.json").read_text(encoding="utf-8")
+        if Path(args.trace).with_name("bayes_summary.json").exists()
+        else '{"ec50": {}}'
+    )
+    ec50 = bundle.get("ec50", {})
+    if not ec50:
+        feats = {ch: np.array([r["spends"][ch] for r in train]) for ch in SPEND_COLUMNS}
+        from .mmm.bayesian import adstock_numpy
+
+        ec50 = {ch: float(np.median(adstock_numpy(feats[ch], 0.5))) for ch in SPEND_COLUMNS}
+    results = {}
+    for name, shares in scenario_defs().items():
+        res = evaluate(
+            draws, {"channels": list(SPEND_COLUMNS), "ec50": ec50},
+            total, shares, args.weeks, aux_mean, ranges,
+        )
+        res["marginal_roas"] = {
+            ch: marginal_roas(
+                draws, {"channels": list(SPEND_COLUMNS), "ec50": ec50},
+                total, shares, args.weeks, aux_mean, ch,
+            )
+            for ch in SPEND_COLUMNS
+        }
+        results[name] = res
+        print(
+            f"{name}: sales={res['sales_mean']:,.0f} "
+            f"[{res['sales_lo']:,.0f}, {res['sales_hi']:,.0f}] "
+            f"flags={len(res['extrapolation_flags'])}"
+        )
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(results, indent=2), encoding="utf-8")
+    print(f"saved: {args.out}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Trend-aware MMM commands")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -188,6 +231,12 @@ def main():
     bayes.add_argument("--chains", type=int, default=2)
     bayes.add_argument("--out", default="artifacts")
     bayes.set_defaults(func=cmd_bayes)
+    scen = sub.add_parser("scenarios")
+    scen.add_argument("path")
+    scen.add_argument("--trace", required=True)
+    scen.add_argument("--weeks", type=int, default=13)
+    scen.add_argument("--out", default="artifacts/scenario_results.json")
+    scen.set_defaults(func=cmd_scenarios)
     args = parser.parse_args()
     args.func(args)
 

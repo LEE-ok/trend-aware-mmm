@@ -124,15 +124,28 @@ def standardize(values: list[float]) -> tuple[list[float], float, float]:
     return [(v - mean) / sd for v in values], mean, sd
 
 
-def control_matrix(rows: list[dict], columns: tuple[str, ...] = CONTROL_COLUMNS) -> dict:
-    """Standardized control columns with (mean, sd) for forecast reuse."""
+def control_matrix(
+    rows: list[dict],
+    columns: tuple[str, ...] = CONTROL_COLUMNS,
+    stats: dict | None = None,
+) -> dict:
+    """Standardized control columns.
+
+    Pass train ``stats`` when transforming test/forecast rows so the scale
+    matches the fitted model. Returns stats always.
+    """
     out: dict = {"columns": list(columns), "stats": {}, "values": []}
-    series = {c: [float(r["extras"].get(c) or 0.0) for r in rows] for c in columns}
+    computed: dict = {}
     zcols = {}
-    for col, vals in series.items():
-        z, mean, sd = standardize(vals)
-        zcols[col] = z
-        out["stats"][col] = {"mean": mean, "sd": sd}
+    for col in columns:
+        vals = [float(r["extras"].get(col) or 0.0) for r in rows]
+        if stats is not None and col in stats:
+            mean, sd = stats[col]["mean"], stats[col]["sd"]
+        else:
+            _, mean, sd = standardize(vals)
+        computed[col] = {"mean": mean, "sd": sd}
+        zcols[col] = [(v - mean) / sd if sd else 0.0 for v in vals]
+    out["stats"] = computed
     out["values"] = [[zcols[c][i] for c in columns] for i in range(len(rows))]
     return out
 
@@ -149,3 +162,45 @@ def holiday_flags(extras: dict, holiday_columns: list[str]) -> dict:
 def season_flags(extras: dict, season_columns: list[str]) -> dict:
     """Keep seas_prd_* period dummies only (weekly dummies deferred)."""
     return {c: 1.0 if str(extras.get(c)) == "1" else 0.0 for c in season_columns}
+
+
+def aux_matrix(rows: list[dict], groups: dict, control_stats: dict | None = None) -> tuple:
+    """Standardized controls + bundled holidays + seas_prd (first dropped).
+
+    Returns (matrix, names, control_stats). Pass train control_stats for
+    test/forecast rows. Needs numpy; imported lazily so stdlib-only
+    paths keep working.
+    """
+    import numpy as _np
+
+    parts, names = [], []
+    stats = control_stats
+    if groups["controls"]:
+        cm = control_matrix(rows, tuple(groups["controls"]), stats=stats)
+        stats = cm["stats"]
+        parts.append(_np.asarray(cm["values"], dtype=float))
+        names.extend(f"ctrl_{c}" for c in cm["columns"])
+    if groups["holidays"]:
+        parts.append(
+            _np.array(
+                [
+                    [
+                        holiday_flags(r["extras"], groups["holidays"])["year_end"],
+                        holiday_flags(r["extras"], groups["holidays"])["other_holiday"],
+                    ]
+                    for r in rows
+                ]
+            )
+        )
+        names.extend(["hol_year_end", "hol_other"])
+    seas_cols = groups["seasons"][1:]
+    if seas_cols:
+        parts.append(
+            _np.array(
+                [[season_flags(r["extras"], seas_cols)[c] for c in seas_cols] for r in rows]
+            )
+        )
+        names.extend(f"seas_{c}" for c in seas_cols)
+    if not parts:
+        return None, [], stats
+    return _np.hstack(parts), names, stats
