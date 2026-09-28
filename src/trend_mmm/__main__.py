@@ -142,7 +142,11 @@ def cmd_bayes(args):
         )
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    idata.to_netcdf(str(out / "bayes_trace.nc"))
+    try:
+        idata.to_netcdf(str(out / "bayes_trace.nc"))
+    except Exception as exc:  # missing netCDF backend: trace skipped, summary still saved
+        print(f"trace save skipped: {exc}")
+        idata.to_json(str(out / "bayes_trace.json")) if hasattr(idata, "to_json") else None
     payload = {
         "settings": {"draws": args.draws, "tune": args.tune, "chains": args.chains,
                      "test_weeks": args.test_weeks, "aux_columns": aux_names},
