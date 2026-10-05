@@ -10,7 +10,7 @@
 - [ ] 4~5주: 사전분포 근거 확정 / 승아 → 초안(`docs/priors.md`) 작성됨, 도메인 검토 필요
 - [ ] 6~7주: 태그·신호 정의 / 승아, Vector DB·LangGraph / 종석
 - [x] 8주: 트렌드 모델 비교 및 채택 여부 결정 / 공동 → 채택. test MAPE 0.336→0.305, 순위 강건. `docs/trend-compare.md`
-- [ ] 9~10주: 예산 제약, 최적화, what-if / 공동 → S0~S4 산출 완료(`docs/scenario-results.md`, `simulation/evaluate.py`). 제약 최적화는 다음
+- [x] 9~10주: 예산 제약, 최적화, what-if / 공동 → S0~S4 산출 + 경계 최적화 완료(`docs/optimization.md`, `optimization/allocate.py`). draws 전체 분포 최적은 다음
 - [x] 11~13주: UI 및 설명 / 공동 → Streamlit MVP(`apps/dashboard/app.py`: EDA, S0-S4, what-if). 챗봇은 보류
 - [ ] 14~15주: 통합 평가, 보고서, 데모 / 공동
 

@@ -255,6 +255,63 @@ def cmd_scenarios(args):
     print(f"saved: {args.out}")
 
 
+def cmd_optimize(args):
+    from .optimization.allocate import optimize
+    from .simulation.evaluate import evaluate
+    from .simulation.scenarios import check_extrapolation, historical_ranges, scenario_spends
+
+    summary = json.loads(Path(args.summary).read_text(encoding="utf-8"))
+    params = summary["posterior"]["params"]
+    ec50 = summary.get("ec50") or {}
+    groups = discover_columns(args.path)
+    extras = tuple(groups["controls"] + groups["holidays"] + groups["seasons"])
+    rows = load_weekly(args.path, extra=extras)
+    train, _ = time_split(rows, test_weeks=26)
+    if not ec50:
+        from .mmm.bayesian import adstock_numpy
+
+        ec50 = {
+            ch: float(np.median(adstock_numpy(np.array([r["spends"][ch] for r in train]), 0.5)))
+            for ch in SPEND_COLUMNS
+        }
+    train_aux, _, train_stats = _aux_matrix(train, groups)
+    recent = rows[-args.weeks :]
+    recent_aux, _, _ = _aux_matrix(recent, groups, control_stats=train_stats)
+    aux_mean = np.asarray(recent_aux, dtype=float).mean(axis=0)
+    draw = {"intercept": params["intercept"]["mean"]}
+    for ch in SPEND_COLUMNS:
+        draw[f"beta_{ch}"] = params[f"beta_{ch}"]["mean"]
+        draw[f"decay_{ch}"] = params[f"decay_{ch}"]["mean"]
+        draw[f"alpha_{ch}"] = params[f"alpha_{ch}"]["mean"]
+    if "gamma" in params and len(params["gamma"]["mean"]) == len(aux_mean):
+        draw["gamma"] = np.array(params["gamma"]["mean"])
+    else:
+        draw["gamma"] = np.zeros(len(aux_mean))
+    if args.bounds:
+        bounds = {ch: tuple(v) for ch, v in json.loads(args.bounds).items()}
+    else:
+        bounds = {ch: (0.0, 0.6) for ch in SPEND_COLUMNS}
+    bundle = {"channels": list(SPEND_COLUMNS), "ec50": ec50}
+    res = optimize(draw, bundle, args.total, args.weeks, aux_mean, bounds)
+    spends = scenario_spends(args.total, res["shares"], args.weeks)
+    flags = check_extrapolation(spends, historical_ranges(rows, SPEND_COLUMNS))
+    print("shares: " + ", ".join(f"{ch}={s:.1%}" for ch, s in res["shares"].items()))
+    print(f"sales={res['sales']:,.0f} iters={res['iters']} flags={len(flags)}")
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(
+            {"shares": res["shares"], "sales": res["sales"],
+             "marginal_roas": res["marginal_roas"], "iters": res["iters"],
+             "bounds": bounds, "extrapolation_flags": flags,
+             "note": "posterior-mean optimum; intervals need trace draws"},
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"saved: {args.out}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Trend-aware MMM commands")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -292,6 +349,14 @@ def main():
     scen.add_argument("--trend", default=None)
     scen.add_argument("--trend-level", default="mean")
     scen.set_defaults(func=cmd_scenarios)
+    opt = sub.add_parser("optimize")
+    opt.add_argument("path")
+    opt.add_argument("--summary", required=True)
+    opt.add_argument("--total", type=float, required=True)
+    opt.add_argument("--weeks", type=int, default=13)
+    opt.add_argument("--bounds", default=None)
+    opt.add_argument("--out", default="artifacts/optimum.json")
+    opt.set_defaults(func=cmd_optimize)
     args = parser.parse_args()
     args.func(args)
 
