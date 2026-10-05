@@ -126,6 +126,7 @@ def cmd_bayes(args):
     payload = {
         "settings": {"draws": args.draws, "tune": args.tune, "chains": args.chains,
                      "test_weeks": args.test_weeks, "aux_columns": aux_names},
+        "ec50": bundle["ec50"],
         "posterior": summary,
         "train_metrics": train_m,
         "test_metrics": test_m,

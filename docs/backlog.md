@@ -11,7 +11,7 @@
 - [ ] 6~7주: 태그·신호 정의 / 승아, Vector DB·LangGraph / 종석
 - [ ] 8주: 트렌드 모델 비교 및 채택 여부 결정 / 공동
 - [ ] 9~10주: 예산 제약, 최적화, what-if / 공동 → S0~S4 산출 완료(`docs/scenario-results.md`, `simulation/evaluate.py`). 제약 최적화는 다음
-- [ ] 11~13주: UI 및 설명, 여유 시 챗봇 / 공동
+- [x] 11~13주: UI 및 설명 / 공동 → Streamlit MVP(`apps/dashboard/app.py`: EDA, S0-S4, what-if). 챗봇은 보류
 - [ ] 14~15주: 통합 평가, 보고서, 데모 / 공동
 
 ## 완료 기준

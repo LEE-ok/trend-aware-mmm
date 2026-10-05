@@ -140,6 +140,12 @@ def summarize_posterior(idata, channels: tuple[str, ...]) -> dict:
     for name in ("intercept", "sigma"):
         vals = idata.posterior[name].values
         out["params"][name] = {"mean": float(vals.mean()), "sd": float(vals.std())}
+    if "gamma" in idata.posterior:
+        vals = idata.posterior["gamma"].values
+        out["params"]["gamma"] = {
+            "mean": [float(v) for v in vals.mean(axis=(0, 1))],
+            "sd": [float(v) for v in vals.std(axis=(0, 1))],
+        }
     rhat = az.rhat(idata)
     out["max_rhat"] = max(float(v.values.max()) for v in rhat.values())
     return out
