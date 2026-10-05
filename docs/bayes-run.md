@@ -31,6 +31,15 @@ MAPE·RMSE 개선, 방향정확도는 동일. 예측용 확정치가 아니라 �
 - 강도 순서 sem≈vidtr > viddig≈so≈dm. priors 기대(vidtr≈sem > viddig≈so > dm)와 일치.
 - dm/so/viddig의 beta sd가 평균과 비슷할 정도로 큼 → 해당 채널 기여도 불확실성 큼. S1~S4 해석 시 credible interval 필수.
 
+## 4체인 확정런 — 2026-10-05
+
+동일 설정 4체인(500 draws, tune 1000). trace `bayes_trace.nc` 확보.
+
+- test: MAPE **0.336**, RMSE 33,461,832, 방향정확도 0.400. 2체인(0.355) 대비 개선.
+- max R-hat **1.013**. 1.01 기준 살짝 초과. posterior 평균은 2체인과 사실상 동일(beta·decay·alpha 소수점 둘째자리 일치)이라 결론은 안정. 최종 보고 전 tune 연장 검토.
+- Posterior 평균(2체인과 동일): sem beta 1.35억/decay 0.22, vidtr 9,377만/0.38, viddig 2,482만/0.19, so 1,530만/0.19, dm 1,609만/0.49.
+- S0~S4는 4체인 trace로 재산출. S0 12.98억, S1_15 +24.2%, S3_10/15 외삽 플래그 유지. 순위·해석 변동 없음.
+
 ## 한계·다음
 
 - 2체인 실행. R-hat 양호하나 최종 보고 전 4체인 권장.
