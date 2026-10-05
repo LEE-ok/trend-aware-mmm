@@ -85,9 +85,26 @@ def cmd_trends(args):
         print(f"{week}: n={cell['n_docs']} mean_score={cell['mean_score']:.3f}")
 
 
+def cmd_trends_fetch(args):
+    from .trends.google import TREND_KEYWORDS, fetch, save_weekly_csv
+
+    frame = fetch()
+    save_weekly_csv(frame, args.out)
+    print(f"weeks: {len(frame)}, keywords: {list(TREND_KEYWORDS)}")
+    print(f"saved: {args.out}")
+
+
 def _aux_matrix(rows, groups, control_stats=None):
     """Stable-order aux matrix shared by train and forecast paths."""
     return aux_matrix(rows, groups, control_stats=control_stats)
+
+
+def _hstack_col(matrix, column, nrows):
+    """Append one column, creating the matrix when no other aux exists."""
+    col = np.asarray(column, dtype=float).reshape(nrows, 1)
+    if matrix is None:
+        return col
+    return np.hstack([np.asarray(matrix, dtype=float), col])
 
 
 def cmd_bayes(args):
@@ -99,6 +116,15 @@ def cmd_bayes(args):
     train, test = time_split(rows, test_weeks=args.test_weeks)
     train_aux, aux_names, train_stats = _aux_matrix(train, groups)
     test_aux, _, _ = _aux_matrix(test, groups, control_stats=train_stats)
+    if args.trend:
+        from .trends.google import trend_zscores
+
+        trz, tez, _, _ = trend_zscores(
+            [r["date"] for r in train], [r["date"] for r in test], args.trend
+        )
+        train_aux = _hstack_col(train_aux, trz, len(train))
+        test_aux = _hstack_col(test_aux, tez, len(test))
+        aux_names = [*aux_names, "trend_demand"]
     idata, bundle = fit_bayesian(
         train, SPEND_COLUMNS, aux=train_aux,
         draws=args.draws, tune=args.tune, chains=args.chains,
@@ -154,6 +180,23 @@ def cmd_scenarios(args):
     total = sum(sum(r["spends"][ch] for ch in SPEND_COLUMNS) for r in recent)
     recent_aux, _, _ = _aux_matrix(recent, groups, control_stats=train_stats)
     aux_mean = np.asarray(recent_aux, dtype=float).mean(axis=0)
+    if args.trend:
+        from .trends.google import trend_zscores
+
+        trz, _, _, _ = trend_zscores(
+            [r["date"] for r in train], [r["date"] for r in recent], args.trend
+        )
+        level = args.trend_level
+        if level == "mean":
+            tval = float(np.mean(trz[-args.weeks :]))
+        elif level == "low":
+            tval = float(np.percentile(trz, 10))
+        elif level == "high":
+            tval = float(np.percentile(trz, 90))
+        else:
+            raise ValueError("--trend-level must be mean, low or high.")
+        aux_mean = np.append(np.asarray(aux_mean, dtype=float), tval)
+        print(f"trend_demand level={level} value={tval:.3f}")
     from .simulation.scenarios import historical_ranges as _ranges
 
     ranges = _ranges(rows, SPEND_COLUMNS)
@@ -172,6 +215,11 @@ def cmd_scenarios(args):
         if "gamma" in flat:
             draw["gamma"] = flat["gamma"][i]
         draws.append(draw)
+    if draws and "gamma" in draws[0] and len(draws[0]["gamma"]) != len(aux_mean):
+        raise ValueError(
+            f"Trace gamma dim {len(draws[0]['gamma'])} != aux dim {len(aux_mean)}. "
+            "Use a trend-aware trace with --trend (or no --trend with a base trace)."
+        )
     bundle = json.loads(
         Path(args.trace).with_name("bayes_summary.json").read_text(encoding="utf-8")
         if Path(args.trace).with_name("bayes_summary.json").exists()
@@ -224,6 +272,9 @@ def main():
     trends = sub.add_parser("trends")
     trends.add_argument("path")
     trends.set_defaults(func=cmd_trends)
+    fetch = sub.add_parser("trends-fetch")
+    fetch.add_argument("--out", default="data/raw/trends_google.csv")
+    fetch.set_defaults(func=cmd_trends_fetch)
     bayes = sub.add_parser("bayes")
     bayes.add_argument("path")
     bayes.add_argument("--test-weeks", type=int, default=26)
@@ -231,12 +282,15 @@ def main():
     bayes.add_argument("--tune", type=int, default=500)
     bayes.add_argument("--chains", type=int, default=2)
     bayes.add_argument("--out", default="artifacts")
+    bayes.add_argument("--trend", default=None)
     bayes.set_defaults(func=cmd_bayes)
     scen = sub.add_parser("scenarios")
     scen.add_argument("path")
     scen.add_argument("--trace", required=True)
     scen.add_argument("--weeks", type=int, default=13)
     scen.add_argument("--out", default="artifacts/scenario_results.json")
+    scen.add_argument("--trend", default=None)
+    scen.add_argument("--trend-level", default="mean")
     scen.set_defaults(func=cmd_scenarios)
     args = parser.parse_args()
     args.func(args)
