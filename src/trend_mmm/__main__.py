@@ -312,6 +312,34 @@ def cmd_optimize(args):
     print(f"saved: {args.out}")
 
 
+def cmd_retrieve_index(args):
+    from .retrieval.store import TrendStore
+    from .trends.collect import clean_docs, collect_csv
+
+    docs = clean_docs(collect_csv(args.path))
+    store = TrendStore(args.store)
+    n = store.add(docs)
+    print(f"indexed: {n}, total: {store.count()}")
+
+
+def cmd_retrieve_search(args):
+    from .retrieval.store import TrendStore
+
+    store = TrendStore(args.store)
+    for hit in store.search(args.query, args.available_before, args.category, args.n):
+        print(
+            f"{hit['distance']:.3f} [{hit['category']}] {hit['source_url']} "
+            f"(collected {hit['collected_at']})"
+        )
+
+
+def cmd_workflow_trends(args):
+    from .workflows.graph import run_trends_pipeline
+
+    state = run_trends_pipeline(args.source, args.out, kind=args.kind)
+    print(f"weeks: {len(state['weekly'])}, saved: {state['saved']}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Trend-aware MMM commands")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -357,6 +385,22 @@ def main():
     opt.add_argument("--bounds", default=None)
     opt.add_argument("--out", default="artifacts/optimum.json")
     opt.set_defaults(func=cmd_optimize)
+    idx = sub.add_parser("retrieve-index")
+    idx.add_argument("path")
+    idx.add_argument("--store", default="artifacts/chroma")
+    idx.set_defaults(func=cmd_retrieve_index)
+    sea = sub.add_parser("retrieve-search")
+    sea.add_argument("query")
+    sea.add_argument("--store", default="artifacts/chroma")
+    sea.add_argument("--available-before", default=None)
+    sea.add_argument("--category", default=None)
+    sea.add_argument("--n", type=int, default=5)
+    sea.set_defaults(func=cmd_retrieve_search)
+    wf = sub.add_parser("workflow-trends")
+    wf.add_argument("source")
+    wf.add_argument("--out", required=True)
+    wf.add_argument("--kind", default="docs-csv")
+    wf.set_defaults(func=cmd_workflow_trends)
     args = parser.parse_args()
     args.func(args)
 
