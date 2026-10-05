@@ -55,7 +55,9 @@ def csv_path() -> str:
 st.title("Trend-aware MMM: budget simulator")
 path = csv_path()
 
-tab_eda, tab_scen, tab_whatif = st.tabs(["EDA", "S0-S4 scenarios", "What-if"])
+tab_eda, tab_scen, tab_whatif, tab_curve = st.tabs(
+    ["EDA", "S0-S4 scenarios", "What-if", "Response curves"]
+)
 
 with tab_eda:
     try:
@@ -186,3 +188,67 @@ with tab_whatif:
             st.table([{"channel": ch, "ROAS": round(v, 1)} for ch, v in res["roas"].items()])
             if res["extrapolation_flags"]:
                 st.warning(f"Extrapolation: {res['extrapolation_flags']}")
+
+with tab_curve:
+    from trend_mmm.mmm.bayesian import adstock_numpy, hill_numpy
+
+    summary_path = ART / "bayes_summary.json"
+    if not summary_path.exists():
+        st.warning("artifacts/bayes_summary.json not found. Run the bayes CLI first.")
+        st.stop()
+    summary = load_json(str(summary_path))
+    params = summary["posterior"]["params"] if "params" in summary["posterior"] else summary["posterior"]
+    ec50 = summary.get("ec50") or {}
+    try:
+        rows, groups = load_rows(path)
+    except Exception as exc:
+        st.error(f"Cannot load CSV: {exc}")
+        st.stop()
+    if not ec50:
+        train_rows = rows[: len(rows) - 26]
+        ec50 = {
+            ch: float(np.median(adstock_numpy(np.array([r["spends"][ch] for r in train_rows]), 0.5)))
+            for ch in CHANNELS
+        }
+    train, _ = rows[: len(rows) - 26], rows[len(rows) - 26 :]
+    _, _, train_stats = aux_matrix(train, groups)
+    recent = rows[-13:]
+    recent_aux, _, _ = aux_matrix(recent, groups, control_stats=train_stats)
+    aux_mean = np.asarray(recent_aux, dtype=float).mean(axis=0)
+    draw = {"intercept": params["intercept"]["mean"]}
+    for ch in CHANNELS:
+        draw[f"beta_{ch}"] = params[f"beta_{ch}"]["mean"]
+        draw[f"decay_{ch}"] = params[f"decay_{ch}"]["mean"]
+        draw[f"alpha_{ch}"] = params[f"alpha_{ch}"]["mean"]
+    if "gamma" in params and len(params["gamma"]["mean"]) == len(aux_mean):
+        draw["gamma"] = np.array(params["gamma"]["mean"])
+    else:
+        draw["gamma"] = np.zeros(len(aux_mean))
+    total = st.number_input("Total budget (13 weeks)", value=16_200_000, step=100_000, key="curve_total")
+    weeks = 13
+    base_shares = {"mdsp_sem": 0.5028, "mdsp_dm": 0.2582, "mdsp_so": 0.1321,
+                   "mdsp_vidtr": 0.0961, "mdsp_viddig": 0.0108}
+    grid = [i / 100 for i in range(0, 61, 3)]
+    curves = {}
+    for ch in CHANNELS:
+        pts = []
+        rest = {o: base_shares[o] / (1 - base_shares[ch]) for o in CHANNELS if o != ch}
+        for s in grid:
+            shares = {o: rest[o] * (1 - s) for o in rest}
+            shares[ch] = s
+            spends = {c: [total * shares[c] / weeks] * weeks for c in CHANNELS}
+            mu = np.full(weeks, draw["intercept"])
+            for c in CHANNELS:
+                raw = np.maximum(np.asarray(spends[c]), 0.0)
+                mu += draw[f"beta_{c}"] * hill_numpy(
+                    adstock_numpy(raw, draw[f"decay_{c}"]), draw[f"alpha_{c}"],
+                    ec50.get(c, 1.0),
+                )
+            mu += np.asarray(aux_mean) @ np.asarray(draw["gamma"])
+            pts.append(float(mu.sum()))
+        curves[ch] = pts
+    st.line_chart({ch: vals for ch, vals in curves.items()})
+    st.caption(
+        "Posterior-mean sales vs channel share (others rescaled, total fixed). "
+        "X axis: share 0-60% in 3%p steps. Saturation visible where curves flatten."
+    )

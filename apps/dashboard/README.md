@@ -17,6 +17,8 @@ streamlit run apps/dashboard/app.py
 - What-if: 채널 비중 슬라이더 + 총예산 입력 → 예상 매출.
   `artifacts/bayes_trace.nc`가 있으면 100 draws 구간 포함,
   없으면 posterior-mean 근사(구간 없음) + 외삽 경고.
+- Response curves: 채널 비중 0~60% 변화에 따른 posterior-mean 매출 곡선.
+  총액 고정, 나머지는 기준비중대로 재배분. 포화 지점 육안 확인용.
 
 필요 아티팩트 생성:
 
