@@ -17,8 +17,8 @@ def _node_collect(state: dict) -> dict:
         docs = [
             {
                 "source_url": f"google-trends:{col}",
-                "published_at": day.date().isoformat(),
-                "collected_at": day.date().isoformat(),
+                "published_at": day.date(),
+                "collected_at": day.date(),
                 "category": "search-interest",
                 "score": float(value) / 100.0,
                 "text": f"{col} search interest {float(value):.0f}",

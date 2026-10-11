@@ -82,6 +82,33 @@ class WorkflowTests(unittest.TestCase):
             self.assertIn("2014-08-03", state["weekly"])
             self.assertTrue(Path(out).exists())
 
+    def test_google_fetch_output_feeds_the_trend_variable(self):
+        import datetime
+        from unittest import mock
+
+        from trend_mmm.trends.google import trend_zscores
+        from trend_mmm.workflows.graph import run_trends_pipeline
+
+        try:
+            import pandas as pd
+        except ImportError:
+            self.skipTest("pandas not installed")
+        days = [datetime.date(2014, 8, 3) + datetime.timedelta(weeks=i) for i in range(6)]
+        frame = pd.DataFrame(
+            {"sale": [10, 20, 30, 40, 50, 60], "gift": [30, 40, 50, 60, 70, 80]},
+            index=pd.to_datetime(days),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            out = str(Path(tmp) / "weekly.csv")
+            with mock.patch("trend_mmm.trends.google.fetch", return_value=frame):
+                state = run_trends_pipeline("unused", out, kind="google-fetch")
+            self.assertEqual(len(state["weekly"]), 6)
+            self.assertAlmostEqual(state["weekly"]["2014-08-03"]["mean_score"], 0.2)
+            train_z, test_z, _, _ = trend_zscores(days[:4], days[4:], out)
+            self.assertAlmostEqual(sum(train_z), 0.0)
+            self.assertGreater(test_z[1], test_z[0])
+            self.assertGreater(test_z[0], max(train_z))
+
     def test_pipeline_abort_empty(self):
         from trend_mmm.workflows.graph import run_trends_pipeline
 

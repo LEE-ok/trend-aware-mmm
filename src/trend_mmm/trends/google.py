@@ -83,7 +83,10 @@ def trend_zscores(train_days: list, test_days: list, path: str | Path) -> tuple:
     """
     import statistics
 
-    data = load_series(path, columns=list(TREND_KEYWORDS))
+    # A workflow-trends output (wk_strt_dt, n_docs, mean_score) is used through its mean_score.
+    with Path(path).open(encoding="utf-8-sig", newline="") as stream:
+        header = next(csv.reader(stream), [])
+    data = load_series(path, columns=["mean_score"] if "mean_score" in header else list(TREND_KEYWORDS))
     comp = dict(composite(data))
     train_vals = [comp[d] for d in train_days]
     mu = statistics.mean(train_vals)
