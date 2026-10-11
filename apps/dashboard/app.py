@@ -52,8 +52,128 @@ def csv_path() -> str:
     return sidebar.text_input("Weekly CSV", value=default)
 
 
+SERIES_1, SERIES_2, INK = "#2a78d6", "#eb6834", "#898781"
+
+
+def interval_chart(results: dict) -> dict:
+    """Scenario mean + 80% interval against the S0 band (Vega-Lite spec, 1e8 USD)."""
+    s0 = results["S0"]
+    rows = [
+        {
+            "scenario": name,
+            "mean": r["sales_mean"] / 1e8,
+            "lo": r["sales_lo"] / 1e8,
+            "hi": r["sales_hi"] / 1e8,
+            "range": "extrapolated" if r["extrapolation_flags"] else "within observed spend",
+        }
+        for name, r in results.items()
+    ]
+    x = {"field": "scenario", "type": "nominal", "sort": None, "title": None, "axis": {"labelAngle": 0}}
+    y = {"type": "quantitative", "scale": {"zero": False}, "title": "13-week sales (100M USD)"}
+    tip = [
+        {"field": "scenario"},
+        {"field": "mean", "format": ".2f"},
+        {"field": "lo", "format": ".2f", "title": "80% low"},
+        {"field": "hi", "format": ".2f", "title": "80% high"},
+        {"field": "range"},
+    ]
+    return {
+        "height": 340,
+        "layer": [
+            {
+                "data": {"values": [{"lo": s0["sales_lo"] / 1e8, "hi": s0["sales_hi"] / 1e8}]},
+                "mark": {"type": "rect", "color": INK, "opacity": 0.15},
+                "encoding": {"y": {"field": "lo", **y}, "y2": {"field": "hi"}},
+            },
+            {
+                "data": {"values": rows},
+                "mark": {"type": "rule", "strokeWidth": 2, "color": SERIES_1},
+                "encoding": {"x": x, "y": {"field": "lo", **y}, "y2": {"field": "hi"}, "tooltip": tip},
+            },
+            {
+                "data": {"values": rows},
+                "mark": {"type": "point", "size": 90, "color": SERIES_1, "strokeWidth": 2},
+                "encoding": {
+                    "x": x,
+                    "y": {"field": "mean", **y},
+                    "fill": {
+                        "field": "range", "type": "nominal", "title": None,
+                        "scale": {
+                            "domain": ["within observed spend", "extrapolated"],
+                            "range": [SERIES_1, "white"],
+                        },
+                        "legend": {"orient": "top", "symbolStrokeColor": SERIES_1, "symbolStrokeWidth": 2},
+                    },
+                    "tooltip": tip,
+                },
+            },
+        ],
+    }
+
+
+def shares_chart(opt: dict) -> dict:
+    """Recommended share per channel, current S0 share and the per-draw 80% range."""
+    from trend_mmm.simulation.evaluate import BASE_SHARES
+
+    best, each = opt["expected_optimum"]["shares"], opt["per_draw_optimum"]["shares_interval"]
+    rows = [
+        {
+            "channel": ch.replace("mdsp_", ""),
+            "recommended": 100 * best[ch],
+            "current": 100 * BASE_SHARES[ch],
+            "lo": 100 * each[ch][0],
+            "hi": 100 * each[ch][1],
+        }
+        for ch in best
+    ]
+    x = {"field": "channel", "type": "nominal", "sort": None, "title": None, "axis": {"labelAngle": 0}}
+    y = {"type": "quantitative", "title": "Share of budget (%)"}
+    tip = [
+        {"field": "channel"},
+        {"field": "recommended", "format": ".1f"},
+        {"field": "current", "format": ".1f", "title": "current (S0)"},
+        {"field": "lo", "format": ".1f", "title": "per-draw 80% low"},
+        {"field": "hi", "format": ".1f", "title": "per-draw 80% high"},
+    ]
+    names = ["recommended", "current (S0)", "per-draw 80% range"]
+    color = {"scale": {"domain": names, "range": [SERIES_1, SERIES_2, INK]}, "title": None, "legend": {"orient": "top"}}
+    return {
+        "height": 340,
+        "data": {"values": rows},
+        "layer": [
+            {
+                "mark": {"type": "bar", "width": {"band": 0.5}, "cornerRadiusEnd": 4},
+                "encoding": {"x": x, "y": {"field": "recommended", **y}, "color": {"datum": names[0], **color},
+                             "tooltip": tip},
+            },
+            {
+                "mark": {"type": "rule", "strokeWidth": 2},
+                "encoding": {"x": x, "y": {"field": "lo", **y}, "y2": {"field": "hi"},
+                             "color": {"datum": names[2], **color}, "tooltip": tip},
+            },
+            {
+                "mark": {"type": "tick", "thickness": 3, "width": {"band": 0.7}},
+                "encoding": {"x": x, "y": {"field": "current", **y}, "color": {"datum": names[1], **color},
+                             "tooltip": tip},
+            },
+        ],
+    }
+
+
+st.set_page_config(page_title="Trend-aware MMM", layout="wide")
 st.title("Trend-aware MMM: budget simulator")
 path = csv_path()
+if (ART / "bayes_summary.json").exists():
+    _fit = load_json(str(ART / "bayes_summary.json"))
+    _rhat = _fit["posterior"]["max_rhat"]
+    st.sidebar.header("Model")
+    st.sidebar.metric("Test MAPE", f"{_fit['test_metrics']['mape']:.3f}")
+    st.sidebar.metric("Max R-hat", f"{_rhat:.3f}", "below 1.01" if _rhat < 1.01 else "above 1.01",
+                      delta_color="normal" if _rhat < 1.01 else "inverse")
+    st.sidebar.caption(
+        f"{_fit['settings']['chains']} chains, {_fit['settings']['draws']} draws. "
+        "All intervals are 80% credible intervals."
+    )
 
 tab_eda, tab_opt, tab_chat, tab_scen, tab_whatif, tab_curve = st.tabs(
     ["EDA", "Optimum", "Chat", "S0-S4 scenarios", "What-if", "Response curves"]
@@ -90,7 +210,13 @@ with tab_opt:
     if not opt_files:
         st.warning("artifacts/optimum_draws.json not found. Run: python -m trend_mmm optimize-draws ...")
     else:
-        opt = load_json(str(st.selectbox("Result", opt_files, format_func=lambda p: p.name)))
+        labels = {
+            "optimum_draws_trend_bounded.json": "Trend-aware, bounded (recommended)",
+            "optimum_draws_trend.json": "Trend-aware, default bounds",
+            "optimum_draws.json": "Base model",
+        }
+        opt_files.sort(key=lambda p: list(labels).index(p.name) if p.name in labels else len(labels))
+        opt = load_json(str(st.selectbox("Result", opt_files, format_func=lambda p: labels.get(p.name, p.name))))
         best, s0, up, each = (opt[k] for k in ("expected_optimum", "s0", "uplift_vs_s0", "per_draw_optimum"))
         lo_pct, hi_pct = opt["interval"]
         level = f"{hi_pct - lo_pct:.0f}%"
@@ -103,20 +229,21 @@ with tab_opt:
             f"uplift [{up['interval'][0]:,.0f}, {up['interval'][1]:,.0f}] (paired per draw). "
             f"S0 sales {s0['sales_mean']:,.0f}."
         )
-        st.table(
-            [
-                {
-                    "channel": ch,
-                    "recommended_%": round(100 * share, 1),
-                    "per_draw_mean_%": round(100 * each["shares_mean"][ch], 1),
-                    f"per_draw_{level}_lo_%": round(100 * each["shares_interval"][ch][0], 1),
-                    f"per_draw_{level}_hi_%": round(100 * each["shares_interval"][ch][1], 1),
-                    "bounds_%": f"{100 * opt['bounds'][ch][0]:.0f}-{100 * opt['bounds'][ch][1]:.0f}",
-                }
-                for ch, share in best["shares"].items()
-            ]
-        )
-        st.bar_chart({ch: 100 * share for ch, share in best["shares"].items()})
+        st.vega_lite_chart(shares_chart(opt), width="stretch")
+        with st.expander("Table view"):
+            st.table(
+                [
+                    {
+                        "channel": ch,
+                        "recommended_%": round(100 * share, 1),
+                        "per_draw_mean_%": round(100 * each["shares_mean"][ch], 1),
+                        f"per_draw_{level}_lo_%": round(100 * each["shares_interval"][ch][0], 1),
+                        f"per_draw_{level}_hi_%": round(100 * each["shares_interval"][ch][1], 1),
+                        "bounds_%": f"{100 * opt['bounds'][ch][0]:.0f}-{100 * opt['bounds'][ch][1]:.0f}",
+                    }
+                    for ch, share in best["shares"].items()
+                ]
+            )
         if best["extrapolation_flags"]:
             st.warning(
                 "Extrapolation: "
@@ -153,26 +280,36 @@ with tab_eda:
     st.caption("Source: retrospective US retail data (docs/data-contract.md v0.2). Correlation is not causation.")
 
 with tab_scen:
-    res_path = ART / "scenario_results.json"
-    if not res_path.exists():
-        st.warning("artifacts/scenario_results.json not found. Run: python -m trend_mmm scenarios ...")
-        st.stop()
-    results = load_json(str(res_path))
-    base = results["S0"]["sales_mean"]
-    table = [
-        {
-            "scenario": name,
-            "sales_mean": f"{r['sales_mean']:,.0f}",
-            "sales_lo": f"{r['sales_lo']:,.0f}",
-            "sales_hi": f"{r['sales_hi']:,.0f}",
-            "vs_S0_%": round(100 * (r["sales_mean"] / base - 1), 1),
-            "extrapolation": len(r["extrapolation_flags"]),
-        }
-        for name, r in results.items()
-    ]
-    st.table(table)
-    st.bar_chart({n: r["sales_mean"] for n, r in results.items()})
-    st.caption("80% credible intervals. Flagged scenarios left the historical spend range.")
+    scen_files = {
+        "Trend-aware (adopted)": ART / "scenario_trend_mean.json",
+        "Base": ART / "scenario_results.json",
+    }
+    scen_files = {label: f for label, f in scen_files.items() if f.exists()}
+    if not scen_files:
+        st.warning("No scenario results in artifacts/. Run: python -m trend_mmm scenarios ...")
+    else:
+        results = load_json(str(scen_files[st.radio("Model", list(scen_files), horizontal=True)]))
+        base = results["S0"]["sales_mean"]
+        st.vega_lite_chart(interval_chart(results), width="stretch")
+        st.caption(
+            "Point = posterior mean, line = 80% credible interval, grey band = S0 interval. "
+            "A scenario whose line reaches into the band is not clearly different from S0. "
+            "Hollow points left the historical spend range (extrapolated)."
+        )
+        with st.expander("Table view"):
+            st.table(
+                [
+                    {
+                        "scenario": name,
+                        "sales_mean": f"{r['sales_mean']:,.0f}",
+                        "sales_lo": f"{r['sales_lo']:,.0f}",
+                        "sales_hi": f"{r['sales_hi']:,.0f}",
+                        "vs_S0_%": round(100 * (r["sales_mean"] / base - 1), 1),
+                        "extrapolated": ", ".join(f["channel"] for f in r["extrapolation_flags"]) or "-",
+                    }
+                    for name, r in results.items()
+                ]
+            )
 
 with tab_whatif:
     try:
