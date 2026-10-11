@@ -1,4 +1,8 @@
-# Bayesian MMM 1차 실행 — 2026-09-28
+# Bayesian MMM 실행 기록
+
+최신 확정 수치는 아래 "최종 확정런 — 2026-10-12" 절. 앞쪽은 이력.
+
+## 1차 실행 — 2026-09-28
 
 `python -m trend_mmm bayes data/raw/data_GIT.csv --test-weeks 26 --draws 500 --tune 1000 --chains 2`.
 설정: priors v1.0(`docs/priors.md`), ec50은 train 중앙값 고정, 통제 3종 + 휴일묶음 2종 + `seas_prd_*`(첫 더미 제외).
@@ -26,7 +30,7 @@ MAPE·RMSE 개선, 방향정확도는 동일. 예측용 확정치가 아니라 �
 
 - intercept 평균 -2,685,997 (sd 15,343,312). 0 근처, 포화특징+절편 트레이드오프 범위.
 - sigma 평균 39,952,642.
-- max R-hat 1.006. 수렴 양호.
+- max R-hat 1.006(2체인 기준).
 - 전 채널 beta 양수. 베이스라인의 `mdsp_so` 음수 문제 해소됨.
 - 강도 순서 sem≈vidtr > viddig≈so≈dm. priors 기대(vidtr≈sem > viddig≈so > dm)와 일치.
 - dm/so/viddig의 beta sd가 평균과 비슷할 정도로 큼 → 해당 채널 기여도 불확실성 큼. S1~S4 해석 시 credible interval 필수.
@@ -40,9 +44,40 @@ MAPE·RMSE 개선, 방향정확도는 동일. 예측용 확정치가 아니라 �
 - Posterior 평균(2체인과 동일): sem beta 1.35억/decay 0.22, vidtr 9,377만/0.38, viddig 2,482만/0.19, so 1,530만/0.19, dm 1,609만/0.49.
 - S0~S4는 4체인 trace로 재산출. S0 12.98억, S1_15 +24.2%, S3_10/15 외삽 플래그 유지. 순위·해석 변동 없음.
 
+## 최종 확정런 — 2026-10-12
+
+`bayes ... --draws 1000 --tune 2000 --chains 4` (target_accept 0.95, seed 7). priors v1.0 그대로. 기본 모델 샘플링 518초.
+
+| 구분 | 기본 | trend 결합 (`--trend`) |
+|---|---|---|
+| test MAPE | 0.336 | **0.306** |
+| test RMSE | 33,495,551 | 31,441,709 |
+| test 방향정확도 | 0.400 | 0.360 |
+| train MAPE | 0.283 | 0.263 |
+| max R-hat | **1.004** | **1.003** |
+| 최소 bulk ESS | 1,240 | 1,101 |
+| divergence (4000 draws 중) | 0 | 3 |
+
+- 두 모델 모두 R-hat 1.01 이하. 10-05의 1.013/1.019는 tune을 2배로 늘린 뒤 해소.
+- trend 모델에 divergence 3건(0.075%). 소수지만 0은 아니므로 보고서에 표기.
+- 방향정확도는 개선되지 않았다(0.40, 0.36). 이 모델은 주간 등락 방향 예측용으로 쓰지 않는다.
+
+Posterior 평균 (sd):
+
+| 채널 | 기본 beta | 기본 decay | 기본 alpha | trend beta | trend decay | trend alpha |
+|---|---|---|---|---|---|---|
+| mdsp_dm | 1,646만 (1,358만) | 0.49 (0.11) | 0.93 (0.34) | 1,931만 (1,573만) | 0.50 (0.11) | 0.93 (0.35) |
+| mdsp_so | 1,559만 (1,260만) | 0.19 (0.12) | 0.90 (0.35) | 1,125만 (1,052만) | 0.20 (0.12) | 0.83 (0.36) |
+| mdsp_vidtr | 9,446만 (2,423만) | 0.38 (0.07) | 1.24 (0.19) | 6,514만 (2,640만) | 0.43 (0.10) | 1.09 (0.27) |
+| mdsp_viddig | 2,452만 (1,719만) | 0.19 (0.11) | 1.00 (0.33) | 2,584만 (1,747만) | 0.19 (0.11) | 0.95 (0.33) |
+| mdsp_sem | 1억 3,604만 (2,820만) | 0.23 (0.11) | 1.34 (0.13) | 7,848만 (3,001만) | 0.25 (0.13) | 1.19 (0.25) |
+
+- 10-05 4체인과 평균이 거의 같다(예: sem beta 1.35억 → 1.36억, vidtr 9,377만 → 9,446만). 결론 변동 없음.
+- dm/so/viddig는 여전히 beta sd가 평균과 비슷하다. 이 채널들의 기여는 구간과 함께만 인용.
+- trend gamma 평균 24,057,742 (sd 3,849,802).
+
 ## 한계·다음
 
-- 2체인 실행. R-hat 양호하나 최종 보고 전 4체인 권장.
-- ec50 고정, alpha/decay posterior sd 큼 → 2차에서 ec50 추정 전환 검토.
-- 다음: S0~S4 시나리오별 예상 sales·기여도·ROAS 산출(`docs/scenario.md` 9절).
-- trace(`bayes_trace.nc`)는 OneDrive 잠금 회피를 위해 로컬 temp에 보관. 재현은 위 커맨드로 가능.
+- ec50 고정(train 중앙값). alpha/decay posterior sd가 커서 ec50 추정 전환은 후속 과제.
+- trace(`bayes_trace.nc`)는 OneDrive 잠금 회피를 위해 로컬 temp(`%TEMP%/opencode/final_base`, `final_trend`)에 보관.
+  재현은 위 커맨드로 가능. 시나리오는 `docs/scenario-results.md`, 최적화는 `docs/optimization.md`.

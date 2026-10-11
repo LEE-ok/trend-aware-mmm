@@ -2,15 +2,34 @@
 
 과거 마케팅 성과와 시장 트렌드를 활용한 다음 분기 예산 시뮬레이터.
 
-## 현재 상태
-CSV 계약 v0.2(5채널 코어: dm/so/vidtr/viddig/sem, `data_GIT.csv` 회고 시뮬레이션용),
-전처리·베이스라인 MMM·트렌드 MVP·시간순 검증이 구현되었습니다.
-PyMC Bayesian MMM, 자동 수집, Vector DB, LangGraph, 예산 최적화, UI는 아직 구현되지 않았습니다.
+## 현재 상태 (2026-10-12)
+데이터는 `data_GIT.csv` 주간 209주(train 183 / test 26), 5채널(dm/so/vidtr/viddig/sem), 계약 v0.2.
+
+| 모델 | test MAPE | 방향정확도 | max R-hat |
+|---|---|---|---|
+| 베이스라인(OLS) | 0.370 | 0.400 | — |
+| Bayes 기본(4체인) | 0.336 | 0.400 | 1.004 |
+| Bayes + trend(4체인) | 0.306 | 0.360 | 1.003 |
+
+확정런(4체인, tune 2000, draws 1000) 기준입니다. 방향정확도는 개선되지 않았습니다.
+채택 모델(trend)의 기대최적 배분은 S0 대비 +3.15억(80% 구간 [1.43, 4.86], 경계 적용안)입니다.
+
+구현됨:
+- 전처리·검증, 베이스라인 MMM, PyMC Bayesian MMM(adstock + Hill 포화, `docs/bayes-run.md`)
+- Google Trends 결합과 채택 판정(`docs/trend-compare.md`)
+- S0~S4 예산 시나리오, marginal ROAS, 외삽 플래그(`docs/scenario-results.md`)
+- 예산 최적화: 점최적 + draws 전체 최적 분포(`docs/optimization.md`)
+- Chroma 검색, LangGraph 트렌드 파이프라인(`docs/retrieval.md`)
+- 파이프라인 출력 → 트렌드 변수 주입(`docs/retrieval.md`)
+- 챗봇: LangGraph + Claude Haiku 툴콜(`docs/chatbot.md`)
+- Streamlit 대시보드(`apps/dashboard/app.py`): EDA, 최적 배분, 챗, 시나리오, what-if, 반응곡선
+
+미구현: 문서 검색 결과 기반 변수, 크롤러 자동화, Neo4j.
 
 ## 폴더 구조
 ```text
 trend-aware-mmm/
-├── apps/dashboard/       # 시뮬레이터 UI (예정)
+├── apps/dashboard/       # 시뮬레이터 UI (Streamlit)
 ├── src/trend_mmm/
 │   ├── data/             # CSV 검증, 전처리, 합성 데이터
 │   ├── mmm/              # 학습, 진단, posterior 예측
@@ -43,10 +62,18 @@ python -m trend_mmm validate data/sample/marketing.csv
 python -m trend_mmm eda data/raw/data_GIT.csv
 python -m trend_mmm baseline data/raw/data_GIT.csv --test-weeks 26 --out artifacts
 python -m trend_mmm trends data/sample/trends.csv
+python -m trend_mmm bayes data/raw/data_GIT.csv --draws 1000 --tune 2000 --chains 4 --out artifacts
+python -m trend_mmm scenarios data/raw/data_GIT.csv --trace artifacts/bayes_trace.nc
+python -m trend_mmm optimize-draws data/raw/data_GIT.csv --trace artifacts/bayes_trace.nc
+python -m trend_mmm chat -q "예산을 어떻게 바꾸는 게 좋아?"
+streamlit run apps/dashboard/app.py
 python -m unittest discover -s tests -v
 ```
 
-기본 코드는 Python 표준 라이브러리만 사용합니다. 향후 PyMC, LangGraph 등의 버전은 실제 통합 시 검증 후 고정합니다.
+트렌드 결합 모델은 `bayes`, `scenarios`, `optimize-draws`에 `--trend data/raw/trends_google.csv`를 붙입니다.
+의존성은 `pyproject.toml`에 있습니다(PyMC, ArviZ, Streamlit, Chroma, LangGraph 등).
+챗봇은 `.env`의 `ANTHROPIC_API_KEY`가 필요합니다(`.env.example` 참고).
+OneDrive 폴더에서 trace 저장이 잠기면 `--out`을 로컬 temp 경로로 지정하세요.
 
 ## 협업
 - 승아: 데이터 적합성, 용어·변수 정의, 사전분포 근거, 결과 해석, 사용성 평가
@@ -56,11 +83,11 @@ python -m unittest discover -s tests -v
 - 라이선스는 팀 합의 후 추가합니다.
 
 ## 다음 작업
-1. ~~업종·성과 지표·채널 확정~~ → 완료(계약 v0.2). 실제 원본은 `data/raw/`에 두고 Git 제외, 출처·라이선스 표기
-2. ~~EDA·전처리·베이스라인·시간순 검증~~ → 완료(`docs/eda.md`, test MAPE 0.370). 예측용이 아닌 기준선
-3. 사전분포 확정(승아, `docs/priors.md` 검토) 후 PyMC Bayesian MMM
-4. 시간순 검증 후 트렌드 처리 연결
-5. 최적화·시뮬레이터·UI 연결
+1. ~~사전분포 확정~~ → 완료(수치표 v1.0, `docs/priors.md`)
+2. ~~최종 확정런~~ → 완료(R-hat 1.004 / 1.003, `docs/bayes-run.md`)
+3. ~~E2E 통합 테스트~~ → 완료(`tests/test_e2e.py`)
+4. ~~챗봇, 파이프라인 → 외부변수 주입~~ → 완료(`docs/chatbot.md`, `docs/retrieval.md`)
+5. UI 정리, 최종 보고서·데모
 
 docs/architecture.md, docs/data-contract.md, docs/backlog.md를 참고하세요.
 
