@@ -202,5 +202,6 @@ def aux_matrix(rows: list[dict], groups: dict, control_stats: dict | None = None
         )
         names.extend(f"seas_{c}" for c in seas_cols)
     if not parts:
-        return None, [], stats
+        # (n, 0) rather than None so callers can .mean(axis=0) / hstack unconditionally
+        return _np.empty((len(rows), 0)), [], stats
     return _np.hstack(parts), names, stats

@@ -366,10 +366,15 @@ with tab_whatif:
                 draw[f"beta_{ch}"] = float(flat[f"beta_{ch}"][i, 0])
                 draw[f"decay_{ch}"] = float(flat[f"decay_{ch}"][i, 0])
                 draw[f"alpha_{ch}"] = float(flat[f"alpha_{ch}"][i, 0])
-            if "gamma" in flat:
+            if "gamma" in flat and flat["gamma"].shape[1] == len(aux_mean):
                 draw["gamma"] = flat["gamma"][i]
             draws.append(draw)
         bundle = {"channels": CHANNELS, "ec50": ec50 or {ch: 1.0 for ch in CHANNELS}}
+        if "gamma" in flat and flat["gamma"].shape[1] != len(aux_mean):
+            st.warning(
+                "This CSV does not have the control/holiday/season columns the model was fitted on, "
+                "so those terms are left out. Numbers below are for trying the UI, not for reference."
+            )
         if st.button("Evaluate"):
             res = evaluate(draws, bundle, float(total), shares, int(weeks), aux_mean, ranges)
             st.metric("Expected sales", f"{res['sales_mean']:,.0f}")

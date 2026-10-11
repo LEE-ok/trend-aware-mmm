@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from trend_mmm.data.preprocess import (
+    aux_matrix,
     control_matrix,
     discover_columns,
     holiday_flags,
@@ -103,6 +104,16 @@ class PreprocessTests(unittest.TestCase):
             self.assertEqual(found["controls"], ["me_gas_dpg"])
             self.assertEqual(found["holidays"], ["hldy_Black Friday"])
             self.assertEqual(found["seasons"], ["seas_prd_1"])
+
+    def test_aux_matrix_without_aux_columns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self.write_csv(tmp, make_csv(5))
+            groups = discover_columns(path)
+            rows = load_weekly(path)
+        matrix, names, _ = aux_matrix(rows, groups)
+        self.assertEqual(matrix.shape, (5, 0))
+        self.assertEqual(names, [])
+        self.assertEqual(matrix.mean(axis=0).shape, (0,))
 
 
 if __name__ == "__main__":
