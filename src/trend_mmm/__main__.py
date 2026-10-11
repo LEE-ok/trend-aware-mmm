@@ -422,6 +422,24 @@ def cmd_workflow_trends(args):
     print(f"weeks: {len(state['weekly'])}, saved: {state['saved']}")
 
 
+def cmd_chat(args):
+    from .workflows.chat import ChatContext, ask
+
+    ctx = ChatContext(args.artifacts, args.path, args.store)
+    history = []
+    while True:
+        question = args.question or input("you> ").strip()
+        if not question or question in ("exit", "quit"):
+            break
+        turn = ask(question, ctx, history)
+        history = turn["messages"]
+        for call in turn["tool_calls"]:
+            print(f"[tool] {call['name']} {json.dumps(call['input'], ensure_ascii=False)}")
+        print(turn["answer"])
+        if args.question:
+            break
+
+
 def main():
     parser = argparse.ArgumentParser(description="Trend-aware MMM commands")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -493,6 +511,12 @@ def main():
     wf.add_argument("--out", required=True)
     wf.add_argument("--kind", default="docs-csv")
     wf.set_defaults(func=cmd_workflow_trends)
+    chat = sub.add_parser("chat")
+    chat.add_argument("path", nargs="?", default="data/raw/data_GIT.csv")
+    chat.add_argument("--artifacts", default="artifacts")
+    chat.add_argument("--store", default="artifacts/chroma")
+    chat.add_argument("-q", "--question", default=None)
+    chat.set_defaults(func=cmd_chat)
     args = parser.parse_args()
     args.func(args)
 

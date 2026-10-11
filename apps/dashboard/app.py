@@ -55,9 +55,35 @@ def csv_path() -> str:
 st.title("Trend-aware MMM: budget simulator")
 path = csv_path()
 
-tab_eda, tab_opt, tab_scen, tab_whatif, tab_curve = st.tabs(
-    ["EDA", "Optimum", "S0-S4 scenarios", "What-if", "Response curves"]
+tab_eda, tab_opt, tab_chat, tab_scen, tab_whatif, tab_curve = st.tabs(
+    ["EDA", "Optimum", "Chat", "S0-S4 scenarios", "What-if", "Response curves"]
 )
+
+with tab_chat:
+    from trend_mmm.workflows.chat import ChatContext, ask, load_env
+
+    load_env(ROOT / ".env")
+    st.caption(
+        "Answers come from the saved model results through tool calls (summary, scenarios, optimum, "
+        "what-if, trend document search). Needs ANTHROPIC_API_KEY in .env."
+    )
+    log = st.session_state.setdefault("chat_log", [])
+    with st.form("chat_form", clear_on_submit=True):
+        question = st.text_input("Question", placeholder="예: 예산을 어떻게 바꾸는 게 좋아?")
+        sent = st.form_submit_button("Ask")
+    if sent and question:
+        try:
+            with st.spinner("Thinking..."):
+                turn = ask(question, ChatContext(ART, path, ART / "chroma"), st.session_state.get("chat_history"))
+            st.session_state["chat_history"] = turn["messages"]
+            log.append((question, turn["answer"], [c["name"] for c in turn["tool_calls"]]))
+        except Exception as exc:
+            st.error(f"Chat failed: {exc}")
+    for asked, answer, tools in reversed(log):
+        st.markdown(f"**Q. {asked}**")
+        if tools:
+            st.caption("tools: " + ", ".join(tools))
+        st.markdown(answer)
 
 with tab_opt:
     opt_files = sorted(ART.glob("optimum_draws*.json"))
