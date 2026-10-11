@@ -166,10 +166,9 @@ def cmd_bayes(args):
     print(f"saved: {out / 'bayes_summary.json'}")
 
 
-def cmd_scenarios(args):
+def _forecast_context(args):
+    """Shared scenario setup: rows, total, aux_mean, ranges, draws, ec50."""
     import arviz as az
-
-    from .simulation.evaluate import evaluate, marginal_roas, scenario_defs
 
     groups = discover_columns(args.path)
     extras = tuple(groups["controls"] + groups["holidays"] + groups["seasons"])
@@ -231,6 +230,13 @@ def cmd_scenarios(args):
         from .mmm.bayesian import adstock_numpy
 
         ec50 = {ch: float(np.median(adstock_numpy(feats[ch], 0.5))) for ch in SPEND_COLUMNS}
+    return rows, total, aux_mean, ranges, draws, ec50
+
+
+def cmd_scenarios(args):
+    from .simulation.evaluate import evaluate, marginal_roas, scenario_defs
+
+    _, total, aux_mean, ranges, draws, ec50 = _forecast_context(args)
     results = {}
     for name, shares in scenario_defs().items():
         res = evaluate(
@@ -312,6 +318,82 @@ def cmd_optimize(args):
     print(f"saved: {args.out}")
 
 
+def cmd_optimize_draws(args):
+    from .optimization.allocate import _params, channel_sales, optimize_draws
+    from .simulation.evaluate import BASE_SHARES, INTERVAL_HI, INTERVAL_LO, evaluate
+
+    _, total, aux_mean, ranges, draws, ec50 = _forecast_context(args)
+    if args.total:
+        total = args.total
+    bundle = {"channels": list(SPEND_COLUMNS), "ec50": ec50}
+    if args.bounds:
+        bounds = {ch: tuple(v) for ch, v in json.loads(args.bounds).items()}
+    else:
+        bounds = {ch: (0.0, 0.6) for ch in SPEND_COLUMNS}
+
+    def interval(values):
+        return [float(np.percentile(values, INTERVAL_LO)), float(np.percentile(values, INTERVAL_HI))]
+
+    pooled, pooled_iters = optimize_draws(draws, bundle, total, args.weeks, bounds, pooled=True)
+    each, each_iters = optimize_draws(draws, bundle, total, args.weeks, bounds)
+    shares = dict(zip(SPEND_COLUMNS, (float(v) for v in pooled[0])))
+    res = evaluate(draws, bundle, total, shares, args.weeks, aux_mean, ranges)
+    s0 = evaluate(draws, bundle, total, BASE_SHARES, args.weeks, aux_mean, ranges)
+    # Paired per-draw comparison: intercept and aux cancel, only the channel terms differ.
+    params = _params(draws, bundle)
+    at_pooled = channel_sales(params, pooled, total, args.weeks).sum(axis=1)
+    at_s0 = channel_sales(
+        params, [BASE_SHARES[ch] for ch in SPEND_COLUMNS], total, args.weeks
+    ).sum(axis=1)
+    at_each = channel_sales(params, each, total, args.weeks).sum(axis=1)
+    uplift = at_pooled - at_s0
+    payload = {
+        "n_draws": len(draws),
+        "total_spend": total,
+        "weeks": args.weeks,
+        "bounds": bounds,
+        "expected_optimum": {
+            "shares": shares,
+            "sales_mean": res["sales_mean"],
+            "sales_interval": [res["sales_lo"], res["sales_hi"]],
+            "extrapolation_flags": res["extrapolation_flags"],
+            "iters": pooled_iters,
+        },
+        "s0": {"sales_mean": s0["sales_mean"], "sales_interval": [s0["sales_lo"], s0["sales_hi"]]},
+        "uplift_vs_s0": {
+            "mean": float(uplift.mean()),
+            "interval": interval(uplift),
+            "prob_positive": float((uplift > 0).mean()),
+        },
+        "per_draw_optimum": {
+            "shares_mean": dict(zip(SPEND_COLUMNS, (float(v) for v in each.mean(axis=0)))),
+            "shares_interval": {
+                ch: interval(each[:, i]) for i, ch in enumerate(SPEND_COLUMNS)
+            },
+            "regret_of_expected_optimum_mean": float((at_each - at_pooled).mean()),
+            "iters": each_iters,
+        },
+        "interval": [INTERVAL_LO, INTERVAL_HI],
+    }
+    print("expected optimum: " + ", ".join(f"{ch}={s:.1%}" for ch, s in shares.items()))
+    print(
+        f"sales={res['sales_mean']:,.0f} [{res['sales_lo']:,.0f}, {res['sales_hi']:,.0f}] "
+        f"flags={len(res['extrapolation_flags'])}"
+    )
+    lo, hi = payload["uplift_vs_s0"]["interval"]
+    print(
+        f"uplift vs S0: {uplift.mean():,.0f} [{lo:,.0f}, {hi:,.0f}] "
+        f"P(>0)={payload['uplift_vs_s0']['prob_positive']:.3f}"
+    )
+    for i, ch in enumerate(SPEND_COLUMNS):
+        lo, hi = payload["per_draw_optimum"]["shares_interval"][ch]
+        print(f"per-draw {ch}: mean={each[:, i].mean():.1%} [{lo:.1%}, {hi:.1%}]")
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(f"saved: {args.out}")
+
+
 def cmd_retrieve_index(args):
     from .retrieval.store import TrendStore
     from .trends.collect import clean_docs, collect_csv
@@ -385,6 +467,16 @@ def main():
     opt.add_argument("--bounds", default=None)
     opt.add_argument("--out", default="artifacts/optimum.json")
     opt.set_defaults(func=cmd_optimize)
+    optd = sub.add_parser("optimize-draws")
+    optd.add_argument("path")
+    optd.add_argument("--trace", required=True)
+    optd.add_argument("--total", type=float, default=None)
+    optd.add_argument("--weeks", type=int, default=13)
+    optd.add_argument("--bounds", default=None)
+    optd.add_argument("--out", default="artifacts/optimum_draws.json")
+    optd.add_argument("--trend", default=None)
+    optd.add_argument("--trend-level", default="mean")
+    optd.set_defaults(func=cmd_optimize_draws)
     idx = sub.add_parser("retrieve-index")
     idx.add_argument("path")
     idx.add_argument("--store", default="artifacts/chroma")

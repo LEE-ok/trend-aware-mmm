@@ -55,9 +55,53 @@ def csv_path() -> str:
 st.title("Trend-aware MMM: budget simulator")
 path = csv_path()
 
-tab_eda, tab_scen, tab_whatif, tab_curve = st.tabs(
-    ["EDA", "S0-S4 scenarios", "What-if", "Response curves"]
+tab_eda, tab_opt, tab_scen, tab_whatif, tab_curve = st.tabs(
+    ["EDA", "Optimum", "S0-S4 scenarios", "What-if", "Response curves"]
 )
+
+with tab_opt:
+    opt_files = sorted(ART.glob("optimum_draws*.json"))
+    if not opt_files:
+        st.warning("artifacts/optimum_draws.json not found. Run: python -m trend_mmm optimize-draws ...")
+    else:
+        opt = load_json(str(st.selectbox("Result", opt_files, format_func=lambda p: p.name)))
+        best, s0, up, each = (opt[k] for k in ("expected_optimum", "s0", "uplift_vs_s0", "per_draw_optimum"))
+        lo_pct, hi_pct = opt["interval"]
+        level = f"{hi_pct - lo_pct:.0f}%"
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Expected sales at optimum", f"{best['sales_mean']:,.0f}")
+        col_b.metric("Uplift vs S0", f"{up['mean']:,.0f}", f"{100 * up['mean'] / s0['sales_mean']:.1f}%")
+        col_c.metric("P(uplift > 0)", f"{up['prob_positive']:.3f}")
+        st.write(
+            f"{level} interval: sales [{best['sales_interval'][0]:,.0f}, {best['sales_interval'][1]:,.0f}], "
+            f"uplift [{up['interval'][0]:,.0f}, {up['interval'][1]:,.0f}] (paired per draw). "
+            f"S0 sales {s0['sales_mean']:,.0f}."
+        )
+        st.table(
+            [
+                {
+                    "channel": ch,
+                    "recommended_%": round(100 * share, 1),
+                    "per_draw_mean_%": round(100 * each["shares_mean"][ch], 1),
+                    f"per_draw_{level}_lo_%": round(100 * each["shares_interval"][ch][0], 1),
+                    f"per_draw_{level}_hi_%": round(100 * each["shares_interval"][ch][1], 1),
+                    "bounds_%": f"{100 * opt['bounds'][ch][0]:.0f}-{100 * opt['bounds'][ch][1]:.0f}",
+                }
+                for ch, share in best["shares"].items()
+            ]
+        )
+        st.bar_chart({ch: 100 * share for ch, share in best["shares"].items()})
+        if best["extrapolation_flags"]:
+            st.warning(
+                "Extrapolation: "
+                + ", ".join(f["channel"] for f in best["extrapolation_flags"])
+                + " leaves the historical weekly spend range. Prefer a bounded run."
+            )
+        st.caption(
+            f"Recommended = one allocation maximizing expected sales over {opt['n_draws']} posterior draws. "
+            "Per-draw columns show how much the optimum itself moves across draws: wide ranges mean "
+            "the exact share is not identified, only the direction."
+        )
 
 with tab_eda:
     try:
