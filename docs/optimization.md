@@ -99,7 +99,56 @@ draw별 최적 비중(평균, 80% 구간, %):
 
 - "Hill 포화라 오목성이 보장됨"은 alpha ≤ 1일 때만 성립. posterior에서 vidtr·sem의 alpha 평균이 1을 넘어
   (기본 1.24·1.34, trend 1.09·1.19) 저지출 구간은 S자(볼록)다. 따라서 탐욕 탐색 결과는 국소 최적일 수 있다.
-  2026-10-05 trace에서는 무작위 가능 배분 3,000개 중 기대최적보다 목적함수가 큰 배분이 0개였다(확정런 trace로는 미점검).
-- 기대최적은 평균 매출 기준(위험중립). 하방 분위수 기준 최적화는 하지 않음.
+  2026-10-05 trace에서는 무작위 가능 배분 3,000개 중 기대최적보다 목적함수가 큰 배분이 0개였다.
+  확정런 trace 점검은 아래 `check-optimum` 절(로컬 실행 후 기입).
+- 기대최적은 평균 매출 기준(위험중립). 하방 분위수 기준은 아래 `--objective quantile` 절.
 - 균등 주배분, 이월 0에서 시작, 보조변수 최근 13주 평균 고정. S0~S4와 동일 가정.
 - trend 수준은 mean(최근 13주 평균) 가정. 증분은 paired라 트렌드 수준과 무관하지만 매출 절대값은 수준에 좌우된다.
+
+---
+
+# 국소최적 점검 / 하방 위험 기준 최적화
+
+새 샘플링 없음. 기존 확정런 trace만 사용하므로 보고서의 기대최적·증분 수치는 바뀌지 않는다.
+
+## 국소최적 점검 (`check-optimum`)
+
+`optimize_draws`(pooled) 결과를 경계(`--bounds`) 안의 무작위 가능 배분 N개와 같은 목적함수로 비교한다
+(`optimization/allocate.py: random_check`). 무작위 배분은 `lo + (1 - Σlo)·Dirichlet(1)`에서 뽑고 상한을 넘으면 버린다.
+출력: 더 나은 배분 개수(`n_better`), 최대 개선폭(`max_improvement`, `max_improvement_pct`), 시드, 가장 좋은 무작위 배분.
+
+```bash
+python -m trend_mmm check-optimum data/raw/data_GIT.csv --trace <final_base>/bayes_trace.nc --n 3000 --seed 0 --out artifacts/optimum_check.json
+python -m trend_mmm check-optimum data/raw/data_GIT.csv --trace <final_trend>/bayes_trace.nc --trend data/raw/trends_google.csv --bounds '{"mdsp_dm":[0.05,0.6],"mdsp_so":[0,0.6],"mdsp_vidtr":[0,0.6],"mdsp_viddig":[0,0.083],"mdsp_sem":[0,0.6]}' --n 3000 --seed 0 --out artifacts/optimum_check_trend_bounded.json
+```
+
+`<final_base>`, `<final_trend>`는 확정런 trace 폴더(`docs/bayes-run.md`: `%TEMP%/opencode/final_base`, `final_trend`). 같은 폴더의 `bayes_summary.json`에서 ec50을 읽는다.
+
+| 구분 | n | seed | 더 나은 배분 | 최대 개선폭 |
+|---|---|---|---|---|
+| 기본 | 3000 | 0 | 로컬 실행 후 기입 | 로컬 실행 후 기입 |
+| trend + 경계 | 3000 | 0 | 로컬 실행 후 기입 | 로컬 실행 후 기입 |
+
+`n_better = 0`이면 무작위 탐색으로는 더 나은 배분이 없다는 뜻(전역최적의 증명은 아님).
+0보다 크면 `best_random_shares`를 출발점으로 다시 보거나 multi-start가 필요하다.
+
+## 하방 위험 기준 (`optimize-draws --objective quantile`)
+
+기본(`--objective mean`)은 draw 평균 매출 최대화로 기존과 같다. `--objective quantile --q 0.1`은 draw별 총매출
+(절편·보조항 포함)의 q분위수를 최대화한다. q=0.1이면 80% 구간 하단을 최대한 끌어올리는 배분.
+결과 JSON에 `objective`(`{"type": "quantile", "q": 0.1, "value": ...}`)가 기록되고, `value`는 `sales_interval[0]`과 같다.
+
+```bash
+python -m trend_mmm optimize-draws data/raw/data_GIT.csv --trace <final_trend>/bayes_trace.nc --trend data/raw/trends_google.csv --bounds '{"mdsp_dm":[0.05,0.6],"mdsp_so":[0,0.6],"mdsp_vidtr":[0,0.6],"mdsp_viddig":[0,0.083],"mdsp_sem":[0,0.6]}' --objective quantile --q 0.1 --out artifacts/optimum_draws_trend_bounded_q10.json
+python -m trend_mmm check-optimum data/raw/data_GIT.csv --trace <final_trend>/bayes_trace.nc --trend data/raw/trends_google.csv --bounds '{"mdsp_dm":[0.05,0.6],"mdsp_so":[0,0.6],"mdsp_vidtr":[0,0.6],"mdsp_viddig":[0,0.083],"mdsp_sem":[0,0.6]}' --objective quantile --q 0.1 --out artifacts/optimum_check_trend_bounded_q10.json
+```
+
+| 구분 (trend + 경계) | 비중 dm/so/vidtr/viddig/sem (%) | 매출 평균 | 매출 10% 분위 | S0 대비 증분 (paired) |
+|---|---|---|---|---|
+| 평균 기준 (기존) | 5.1 / 4.1 / 31.1 / 8.2 / 51.4 | 18.28 | 16.10 | +3.15 [1.43, 4.86] |
+| 10% 분위 기준 | 로컬 실행 후 기입 | 로컬 실행 후 기입 | 로컬 실행 후 기입 | 로컬 실행 후 기입 |
+
+- 분위수는 채널별로 더해지지 않아 (받는 채널, 주는 채널) 쌍마다 draw별 총매출을 계산한 뒤 분위수를 잡는다(4000 draws에서도 수 초~수십 초).
+- 분위수 목적함수는 매끄럽지 않아(어느 draw가 분위에 걸리는지가 바뀜) 탐욕 탐색이 조금 일찍 멈출 수 있다.
+  `check-optimum --objective quantile`로 같이 확인할 것. per-draw 최적은 draw 하나라 목적과 무관(평균 기준 그대로).
+- 보고서 권고는 평균 기준 유지. 분위 기준은 "위험회피 시 배분이 얼마나 달라지나"의 민감도로만 인용.

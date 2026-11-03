@@ -318,9 +318,9 @@ def cmd_optimize(args):
     print(f"saved: {args.out}")
 
 
-def cmd_optimize_draws(args):
-    from .optimization.allocate import _params, channel_sales, optimize_draws
-    from .simulation.evaluate import BASE_SHARES, INTERVAL_HI, INTERVAL_LO, evaluate
+def _draws_setup(args):
+    """Shared optimize-draws / check-optimum setup: context, bundle, bounds, objective kwargs."""
+    from .optimization.allocate import draw_offsets
 
     _, total, aux_mean, ranges, draws, ec50 = _forecast_context(args)
     if args.total:
@@ -330,11 +330,26 @@ def cmd_optimize_draws(args):
         bounds = {ch: tuple(v) for ch, v in json.loads(args.bounds).items()}
     else:
         bounds = {ch: (0.0, 0.6) for ch in SPEND_COLUMNS}
+    objective = {"objective": args.objective, "q": args.q}
+    if args.objective == "quantile":
+        objective["offset"] = draw_offsets(draws, args.weeks, aux_mean)
+    return total, aux_mean, ranges, draws, bundle, bounds, objective
+
+
+def _objective_record(args):
+    return {"type": "mean"} if args.objective == "mean" else {"type": "quantile", "q": args.q}
+
+
+def cmd_optimize_draws(args):
+    from .optimization.allocate import _params, channel_sales, objective_value, optimize_draws
+    from .simulation.evaluate import BASE_SHARES, INTERVAL_HI, INTERVAL_LO, evaluate
+
+    total, aux_mean, ranges, draws, bundle, bounds, objective = _draws_setup(args)
 
     def interval(values):
         return [float(np.percentile(values, INTERVAL_LO)), float(np.percentile(values, INTERVAL_HI))]
 
-    pooled, pooled_iters = optimize_draws(draws, bundle, total, args.weeks, bounds, pooled=True)
+    pooled, pooled_iters = optimize_draws(draws, bundle, total, args.weeks, bounds, pooled=True, **objective)
     each, each_iters = optimize_draws(draws, bundle, total, args.weeks, bounds)
     shares = dict(zip(SPEND_COLUMNS, (float(v) for v in pooled[0])))
     res = evaluate(draws, bundle, total, shares, args.weeks, aux_mean, ranges)
@@ -374,7 +389,11 @@ def cmd_optimize_draws(args):
             "iters": each_iters,
         },
         "interval": [INTERVAL_LO, INTERVAL_HI],
+        "objective": _objective_record(args),
     }
+    if args.objective == "quantile":
+        # Achieved q-quantile of total sales; for q=0.1 it equals sales_interval[0].
+        payload["objective"]["value"] = objective_value(params, pooled, total, args.weeks, **objective)
     print("expected optimum: " + ", ".join(f"{ch}={s:.1%}" for ch, s in shares.items()))
     print(
         f"sales={res['sales_mean']:,.0f} [{res['sales_lo']:,.0f}, {res['sales_hi']:,.0f}] "
@@ -388,6 +407,31 @@ def cmd_optimize_draws(args):
     for i, ch in enumerate(SPEND_COLUMNS):
         lo, hi = payload["per_draw_optimum"]["shares_interval"][ch]
         print(f"per-draw {ch}: mean={each[:, i].mean():.1%} [{lo:.1%}, {hi:.1%}]")
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(f"saved: {args.out}")
+
+
+def cmd_check_optimum(args):
+    from .optimization.allocate import optimize_draws, random_check
+
+    total, _, _, draws, bundle, bounds, objective = _draws_setup(args)
+    pooled, _ = optimize_draws(draws, bundle, total, args.weeks, bounds, pooled=True, **objective)
+    res = random_check(
+        draws, bundle, total, args.weeks, bounds, pooled[0], n=args.n, seed=args.seed, **objective
+    )
+    payload = {
+        "n_draws": len(draws), "total_spend": total, "weeks": args.weeks, "bounds": bounds,
+        "objective": _objective_record(args),
+        "optimum_shares": dict(zip(SPEND_COLUMNS, (float(v) for v in pooled[0]))),
+        **res,
+    }
+    print("optimum: " + ", ".join(f"{ch}={s:.1%}" for ch, s in payload["optimum_shares"].items()))
+    print(
+        f"random feasible splits: n={res['n']} seed={res['seed']} better={res['n_better']} "
+        f"max_improvement={res['max_improvement']:,.0f} ({res['max_improvement_pct']:+.3f}%)"
+    )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -438,6 +482,28 @@ def cmd_chat(args):
         print(turn["answer"])
         if args.question:
             break
+
+
+def cmd_chat_eval(args):
+    from .workflows.chat import ChatContext, ask
+    from .workflows.chat_eval import load_cases, run_eval
+
+    cases = load_cases(args.cases)
+    if args.only:
+        cases = [c for c in cases if c["id"] in args.only.split(",")]
+    ctx = ChatContext(args.artifacts, args.path, args.store)
+    report = run_eval(cases, args.artifacts, lambda q: ask(q, ctx))
+    for r in report["results"]:
+        missed = [n["label"] for n in r.get("numbers", []) if not n["found"]]
+        missed += [t["name"] for t in r.get("tools", []) if not t["ok"]]
+        missed += r.get("keywords_missing", []) + [f"forbidden:{w}" for w in r.get("forbidden_hits", [])]
+        note = r.get("reason") or r.get("error") or (f"missed={missed}" if missed else "")
+        print(f"{r['status']:7} {r['id']}  {note}".rstrip())
+    print(json.dumps(report["summary"]))
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"saved: {args.out}")
 
 
 def main():
@@ -494,7 +560,23 @@ def main():
     optd.add_argument("--out", default="artifacts/optimum_draws.json")
     optd.add_argument("--trend", default=None)
     optd.add_argument("--trend-level", default="mean")
+    optd.add_argument("--objective", choices=("mean", "quantile"), default="mean")
+    optd.add_argument("--q", type=float, default=0.1)
     optd.set_defaults(func=cmd_optimize_draws)
+    chk = sub.add_parser("check-optimum")
+    chk.add_argument("path")
+    chk.add_argument("--trace", required=True)
+    chk.add_argument("--total", type=float, default=None)
+    chk.add_argument("--weeks", type=int, default=13)
+    chk.add_argument("--bounds", default=None)
+    chk.add_argument("--n", type=int, default=3000)
+    chk.add_argument("--seed", type=int, default=0)
+    chk.add_argument("--objective", choices=("mean", "quantile"), default="mean")
+    chk.add_argument("--q", type=float, default=0.1)
+    chk.add_argument("--out", default="artifacts/optimum_check.json")
+    chk.add_argument("--trend", default=None)
+    chk.add_argument("--trend-level", default="mean")
+    chk.set_defaults(func=cmd_check_optimum)
     idx = sub.add_parser("retrieve-index")
     idx.add_argument("path")
     idx.add_argument("--store", default="artifacts/chroma")
@@ -517,6 +599,14 @@ def main():
     chat.add_argument("--store", default="artifacts/chroma")
     chat.add_argument("-q", "--question", default=None)
     chat.set_defaults(func=cmd_chat)
+    cev = sub.add_parser("chat-eval")
+    cev.add_argument("path", nargs="?", default="data/raw/data_GIT.csv")
+    cev.add_argument("--cases", default="configs/chat_eval.json")
+    cev.add_argument("--artifacts", default="artifacts")
+    cev.add_argument("--store", default="artifacts/chroma")
+    cev.add_argument("--only", default=None)
+    cev.add_argument("--out", default="artifacts/chat_eval_results.json")
+    cev.set_defaults(func=cmd_chat_eval)
     args = parser.parse_args()
     args.func(args)
 

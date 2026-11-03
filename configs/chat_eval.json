@@ -1,0 +1,169 @@
+{
+  "about": "Chatbot eval set (docs/chatbot.md). Expected numbers are read from artifacts/<source> at run time via a dotted path; kind: money | percent | fraction | plain. Global forbidden terms (연간, annual, 억 원, ...) live in workflows/chat_eval.py.",
+  "cases": [
+    {
+      "id": "recommend_split",
+      "question": "예산을 채널별로 어떻게 나누는 게 좋아? 권고안 비중을 알려줘.",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend_bounded"}}],
+      "numbers": [
+        {"label": "sem share", "source": "optimum_draws_trend_bounded.json", "path": "expected_optimum.shares.mdsp_sem", "kind": "percent", "scale": 100, "abs_tol": 0.15},
+        {"label": "vidtr share", "source": "optimum_draws_trend_bounded.json", "path": "expected_optimum.shares.mdsp_vidtr", "kind": "percent", "scale": 100, "abs_tol": 0.15}
+      ]
+    },
+    {
+      "id": "uplift_vs_s0",
+      "question": "권고 배분으로 바꾸면 지금(S0)보다 매출이 얼마나 늘어?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend_bounded"}}],
+      "numbers": [
+        {"label": "uplift mean", "source": "optimum_draws_trend_bounded.json", "path": "uplift_vs_s0.mean"}
+      ],
+      "keywords_any": ["13주", "13-week", "13 weeks"]
+    },
+    {
+      "id": "uplift_interval",
+      "question": "권고안의 S0 대비 증분 80% 구간이 어떻게 돼?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend_bounded"}}],
+      "numbers": [
+        {"label": "uplift lo", "source": "optimum_draws_trend_bounded.json", "path": "uplift_vs_s0.interval.0"},
+        {"label": "uplift hi", "source": "optimum_draws_trend_bounded.json", "path": "uplift_vs_s0.interval.1"}
+      ]
+    },
+    {
+      "id": "uplift_probability",
+      "question": "권고안이 S0보다 나을 확률은?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend_bounded"}}],
+      "numbers": [
+        {"label": "P(uplift>0)", "source": "optimum_draws_trend_bounded.json", "path": "uplift_vs_s0.prob_positive", "kind": "fraction", "abs_tol": 0.001}
+      ]
+    },
+    {
+      "id": "uplift_pct",
+      "question": "권고안은 S0 대비 매출이 몇 퍼센트 늘어?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend_bounded"}}],
+      "numbers": [
+        {"label": "uplift %", "source": "optimum_draws_trend_bounded.json", "path": "expected_optimum.sales_mean", "pct_change_from": "s0.sales_mean", "kind": "percent", "abs_tol": 0.15}
+      ]
+    },
+    {
+      "id": "sales_intervals",
+      "question": "권고안 매출 구간과 S0 매출 구간을 비교해 줘. 겹쳐?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend_bounded"}}],
+      "numbers": [
+        {"label": "optimum lo", "source": "optimum_draws_trend_bounded.json", "path": "expected_optimum.sales_interval.0"},
+        {"label": "optimum hi", "source": "optimum_draws_trend_bounded.json", "path": "expected_optimum.sales_interval.1"},
+        {"label": "s0 lo", "source": "optimum_draws_trend_bounded.json", "path": "s0.sales_interval.0"},
+        {"label": "s0 hi", "source": "optimum_draws_trend_bounded.json", "path": "s0.sales_interval.1"}
+      ],
+      "keywords_any": ["겹", "overlap"]
+    },
+    {
+      "id": "expected_sales_horizon",
+      "question": "권고안의 예상 매출은 얼마야?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend_bounded"}}],
+      "numbers": [
+        {"label": "optimum sales", "source": "optimum_draws_trend_bounded.json", "path": "expected_optimum.sales_mean"}
+      ],
+      "keywords_any": ["13주", "13-week", "13 weeks"]
+    },
+    {
+      "id": "total_budget",
+      "question": "최적화에 쓴 총 예산은 얼마고 어떤 기간 기준이야?",
+      "tools": [{"name": "get_optimum"}],
+      "numbers": [
+        {"label": "total spend", "source": "optimum_draws_trend_bounded.json", "path": "total_spend"}
+      ],
+      "keywords_any": ["13주", "13-week", "13 weeks"]
+    },
+    {
+      "id": "trend_extrapolation",
+      "question": "경계 없이 trend 모델로 구한 최적 배분에 외삽 문제가 있어?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend"}}],
+      "keywords_any": [["viddig", "디지털 비디오", "digital video"], ["외삽", "관측", "extrapolat"]]
+    },
+    {
+      "id": "base_vs_trend_uplift",
+      "question": "기본 모델과 trend 모델에서 최적 배분의 S0 대비 증분을 비교해 줘.",
+      "tools": [{"name": "get_optimum", "input": {"variant": "base"}}, {"name": "get_optimum", "input": {"variant": "trend"}}],
+      "numbers": [
+        {"label": "base uplift", "source": "optimum_draws.json", "path": "uplift_vs_s0.mean"},
+        {"label": "trend uplift", "source": "optimum_draws_trend.json", "path": "uplift_vs_s0.mean"}
+      ]
+    },
+    {
+      "id": "sem_share_uncertainty",
+      "question": "trend 모델에서 sem 최적 비중은 draw마다 얼마나 달라져?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend"}}],
+      "numbers": [
+        {"label": "sem lo", "source": "optimum_draws_trend.json", "path": "per_draw_optimum.shares_interval.mdsp_sem.0", "kind": "percent", "scale": 100, "abs_tol": 0.15},
+        {"label": "sem hi", "source": "optimum_draws_trend.json", "path": "per_draw_optimum.shares_interval.mdsp_sem.1", "kind": "percent", "scale": 100, "abs_tol": 0.15}
+      ]
+    },
+    {
+      "id": "regret",
+      "question": "권고안 하나로 고정하면 draw별 최적과 비교해 평균 얼마나 손해야?",
+      "tools": [{"name": "get_optimum", "input": {"variant": "trend_bounded"}}],
+      "numbers": [
+        {"label": "regret", "source": "optimum_draws_trend_bounded.json", "path": "per_draw_optimum.regret_of_expected_optimum_mean", "rel_tol": 0.03}
+      ]
+    },
+    {
+      "id": "test_mape",
+      "question": "모델의 test MAPE는 얼마야?",
+      "tools": [{"name": "get_model_summary"}],
+      "numbers": [
+        {"label": "test MAPE", "source": "bayes_summary.json", "path": "test_metrics.mape", "kind": "fraction", "abs_tol": 0.001}
+      ]
+    },
+    {
+      "id": "convergence",
+      "question": "샘플링은 수렴했어?",
+      "tools": [{"name": "get_model_summary"}],
+      "numbers": [
+        {"label": "max R-hat", "source": "bayes_summary.json", "path": "posterior.max_rhat", "kind": "plain", "rel_tol": 0, "abs_tol": 0.0015}
+      ],
+      "keywords_any": ["1.01"]
+    },
+    {
+      "id": "vidtr_alpha",
+      "question": "TV 비디오 채널의 Hill alpha 사후평균은?",
+      "tools": [{"name": "get_model_summary"}],
+      "numbers": [
+        {"label": "alpha vidtr", "source": "bayes_summary.json", "path": "posterior.params.alpha_mdsp_vidtr.mean", "kind": "plain", "rel_tol": 0, "abs_tol": 0.006}
+      ]
+    },
+    {
+      "id": "scenario_s1_10",
+      "question": "채택 모델(trend)에서 S1_10 시나리오는 S0보다 몇 % 높아?",
+      "tools": [{"name": "get_scenarios", "input": {"model": "trend"}}],
+      "numbers": [
+        {"label": "S1_10 vs S0", "source": "scenario_trend_mean.json", "path": "S1_10.sales_mean", "pct_change_from": "S0.sales_mean", "kind": "percent", "abs_tol": 0.1}
+      ]
+    },
+    {
+      "id": "scenario_s0_base",
+      "question": "기본 모델에서 현재 배분(S0)의 매출 80% 구간은?",
+      "tools": [{"name": "get_scenarios", "input": {"model": "base"}}],
+      "numbers": [
+        {"label": "S0 lo", "source": "scenario_results.json", "path": "S0.sales_lo"},
+        {"label": "S0 hi", "source": "scenario_results.json", "path": "S0.sales_hi"}
+      ]
+    },
+    {
+      "id": "currency_stays_usd",
+      "question": "권고안 증분을 원화로 환산해서 알려줘.",
+      "tools": [{"name": "get_optimum"}],
+      "keywords_any": ["USD", "달러", "$"]
+    },
+    {
+      "id": "what_if_custom_split",
+      "question": "sem 40%, vidtr 30%, dm 10%, so 10%, viddig 10%로 나누면 어때?",
+      "tools": [{"name": "evaluate_allocation", "input": {"shares": {"mdsp_sem": 0.4, "mdsp_vidtr": 0.3, "mdsp_dm": 0.1, "mdsp_so": 0.1, "mdsp_viddig": 0.1}}}],
+      "keywords_any": ["S0"]
+    },
+    {
+      "id": "doc_search_no_leak",
+      "question": "2016년 1월 이전에 나온 블랙프라이데이 관련 트렌드 문서를 찾아줘.",
+      "tools": [{"name": "search_trend_docs", "input_has": ["available_before"]}]
+    }
+  ]
+}

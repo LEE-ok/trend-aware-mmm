@@ -6,8 +6,11 @@ from trend_mmm.data.validation import SPEND_COLUMNS
 from trend_mmm.optimization.allocate import (
     _params,
     channel_sales,
+    draw_offsets,
+    objective_value,
     optimize,
     optimize_draws,
+    random_check,
     response_mean,
 )
 
@@ -73,6 +76,66 @@ class OptimizeDrawsTests(unittest.TestCase):
     def test_infeasible_bounds_rejected(self):
         with self.assertRaises(ValueError):
             optimize_draws(make_draws(2), BUNDLE, TOTAL, WEEKS, {ch: (0.0, 0.1) for ch in CHS})
+
+
+class QuantileObjectiveTests(unittest.TestCase):
+    def test_default_objective_is_unchanged(self):
+        draws = make_draws()
+        default, _ = optimize_draws(draws, BUNDLE, TOTAL, WEEKS, BOUNDS, pooled=True)
+        explicit, _ = optimize_draws(draws, BUNDLE, TOTAL, WEEKS, BOUNDS, pooled=True, objective="mean")
+        np.testing.assert_array_equal(default, explicit)
+
+    def test_quantile_optimum_beats_mean_optimum_on_its_quantile(self):
+        draws = make_draws(40, seed=1)
+        params = _params(draws, BUNDLE)
+        offset = draw_offsets(draws, WEEKS, None)
+        mean_opt, _ = optimize_draws(draws, BUNDLE, TOTAL, WEEKS, BOUNDS, pooled=True)
+        q_opt, _ = optimize_draws(
+            draws, BUNDLE, TOTAL, WEEKS, BOUNDS, pooled=True, objective="quantile", q=0.1, offset=offset
+        )
+        np.testing.assert_allclose(q_opt.sum(), 1.0)
+        self.assertTrue((q_opt <= 0.6 + 1e-9).all())
+        q_at = lambda sh: objective_value(params, sh, TOTAL, WEEKS, "quantile", 0.1, offset)
+        mean_at = lambda sh: objective_value(params, sh, TOTAL, WEEKS, "mean", offset=offset)
+        self.assertGreaterEqual(q_at(q_opt[0]), q_at(mean_opt[0]) - 1e-6)
+        self.assertGreaterEqual(mean_at(mean_opt[0]), mean_at(q_opt[0]) - 1e-6)
+
+    def test_offsets_include_intercept_and_aux(self):
+        draws = [{**d, "gamma": np.array([2.0, -1.0])} for d in make_draws(3)]
+        np.testing.assert_allclose(draw_offsets(draws, WEEKS, [1.0, 1.0]), WEEKS * (1000.0 + 1.0))
+
+    def test_bad_objective_rejected(self):
+        with self.assertRaises(ValueError):
+            optimize_draws(make_draws(2), BUNDLE, TOTAL, WEEKS, BOUNDS, pooled=True, objective="max")
+        with self.assertRaises(ValueError):
+            optimize_draws(make_draws(2), BUNDLE, TOTAL, WEEKS, BOUNDS, pooled=True, objective="quantile", q=1.0)
+
+
+class RandomCheckTests(unittest.TestCase):
+    def test_greedy_optimum_has_no_better_random_split(self):
+        draws = make_draws()
+        pooled, _ = optimize_draws(draws, BUNDLE, TOTAL, WEEKS, BOUNDS, pooled=True)
+        res = random_check(draws, BUNDLE, TOTAL, WEEKS, BOUNDS, pooled[0], n=300, seed=7)
+        self.assertEqual((res["n"], res["seed"]), (300, 7))
+        self.assertEqual(res["n_better"], 0)
+        self.assertLessEqual(res["max_improvement"], 1e-6)
+
+    def test_bad_split_is_beaten_and_samples_respect_bounds(self):
+        bounds = {**BOUNDS, CHS[0]: (0.1, 0.3)}
+        worst = [0.3, 0.6, 0.1 / 3, 0.1 / 3, 0.1 / 3]  # feasible but far from the optimum
+        res = random_check(make_draws(), BUNDLE, TOTAL, WEEKS, bounds, worst, n=200, seed=0)
+        self.assertGreater(res["n_better"], 0)
+        self.assertGreater(res["max_improvement"], 0)
+        best = res["best_random_shares"]
+        self.assertAlmostEqual(sum(best.values()), 1.0)
+        self.assertTrue(0.1 - 1e-9 <= best[CHS[0]] <= 0.3 + 1e-9)
+        self.assertTrue(all(v <= 0.6 + 1e-9 for v in best.values()))
+
+    def test_same_seed_same_result(self):
+        draws = make_draws()
+        a = random_check(draws, BUNDLE, TOTAL, WEEKS, BOUNDS, [0.2] * 5, n=50, seed=3)
+        b = random_check(draws, BUNDLE, TOTAL, WEEKS, BOUNDS, [0.2] * 5, n=50, seed=3)
+        self.assertEqual(a, b)
 
 
 if __name__ == "__main__":
