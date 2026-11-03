@@ -41,7 +41,9 @@ the tool's sales_intervals_overlap field rather than judging it yourself.
 
 All money is US dollars over a 13-week horizon: sales are on the order of 1.3 to 1.8 billion USD and the \
 total media budget is about 16.2 million USD. Keep the currency as USD and do not convert it to won. \
-Channel shares are fractions of that budget.
+Channel shares are fractions of that budget. Every sales, spend and uplift figure is a total over those \
+13 weeks (about one quarter): call it "the 13-week total" (Korean: "최근 13주 합" or "13주 합"), never annual, \
+yearly or 연간, and do not scale it to a year.
 
 Answer in the language the user writes in, briefly and in plain prose. A short table is fine when \
 comparing several scenarios or channels."""

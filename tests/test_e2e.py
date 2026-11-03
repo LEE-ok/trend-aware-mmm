@@ -52,6 +52,17 @@ class EndToEndTests(unittest.TestCase):
         # The expected optimum maximizes mean sales, so it cannot lose to S0 on average.
         self.assertGreaterEqual(opt["uplift_vs_s0"]["mean"], 0.0)
         self.assertAlmostEqual(opt["s0"]["sales_mean"], scen["S0"]["sales_mean"], delta=1.0)
+        self.assertEqual(opt["objective"], {"type": "mean"})
+
+        run("optimize-draws", CSV, "--trace", trace, "--objective", "quantile", "--out", out / "optq.json", *trend)
+        optq = json.loads((out / "optq.json").read_text(encoding="utf-8"))
+        self.assertEqual(optq["objective"]["q"], 0.1)
+        # q=0.1 is the lower end of the 80% interval, so both must agree.
+        self.assertAlmostEqual(optq["objective"]["value"], optq["expected_optimum"]["sales_interval"][0], delta=1.0)
+
+        run("check-optimum", CSV, "--trace", trace, "--n", 50, "--out", out / "chk.json", *trend)
+        chk = json.loads((out / "chk.json").read_text(encoding="utf-8"))
+        self.assertEqual((chk["n"], chk["seed"]), (50, 0))
         return summary
 
     def test_base_pipeline(self):

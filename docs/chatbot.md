@@ -36,9 +36,35 @@
 - 문서 검색 → `search_trend_docs` 호출, 거리값이 커 관련성이 낮다고 답함(스토어에 샘플 문서뿐).
 - 자동 테스트(`tests/test_chat.py`)는 API 없이 가짜 클라이언트로 그래프 루프와 툴 오류 처리를 검증.
 
+## 정량 평가 세트
+
+`configs/chat_eval.json`(질문 20개) + `workflows/chat_eval.py`(채점). 케이스마다 다음을 본다.
+
+- 툴: 호출해야 할 툴과 입력(예: `get_optimum(variant=trend_bounded)`).
+- 수치: 기대값은 하드코딩하지 않고 실행 시 `artifacts/<source>`의 경로(`uplift_vs_s0.interval.0` 등)에서 읽는다.
+  종류 money(억·만·M·B 등 단위 해석), percent, fraction(0.993 또는 99.3%), plain(R-hat). 기본 허용 오차 상대 2%.
+- 키워드: 필수/택일(예: "13주"). 금지어: 전 케이스 공통 "연간"·"annual"·"억 원"·"KRW" 등.
+- 통과 = 툴·수치·키워드 모두 충족, 금지어 없음. 산출물 파일이 없으면 skipped.
+
+로컬 실행(실제 API 호출, `.env`에 키 필요):
+
+```bash
+python -m trend_mmm chat-eval data/raw/data_GIT.csv --artifacts artifacts --out artifacts/chat_eval_results.json
+```
+
+`--only recommend_split,uplift_vs_s0`로 일부만. 채점 로직은 가짜 응답으로 단위 테스트(`tests/test_chat_eval.py`).
+
+| 날짜 | 통과 | 수치 적중률 | 툴 적중률 | 금지어 답변 |
+|---|---|---|---|---|
+| 로컬 실행 후 기입 | | | | |
+
+시스템 프롬프트에 기간 용어 지시를 추가했다: 모든 매출·지출·증분은 13주 합이며 "최근 13주 합"으로 부르고
+"연간"이라 하거나 연 단위로 환산하지 말 것.
+
 ## 한계
 
-- 답변 품질 평가는 수동 확인 3건뿐. 정량 평가 세트 없음.
+- 평가 세트는 단일 턴 20문항. 다중 턴 대화와 문장 품질(설명의 적절성)은 채점하지 않는다.
+- 수치 매칭은 관대하다: 단위 없는 숫자는 여러 단위(1, 천, 만, 백만, 억, 십억)를 모두 시도한다.
 - what-if는 기본 모델 trace 기준. 채택 모델(trend) 수치는 `get_scenarios`/`get_optimum`의 trend 변형으로만 제공.
-- 가끔 용어를 틀린다(예: 13주 합을 "연간"이라 표기). 수치 자체는 툴 값 그대로였다.
+- 가끔 용어를 틀렸다(예: 13주 합을 "연간"이라 표기). 프롬프트 지시 추가 후 효과는 평가 세트로 확인(로컬 실행 후 기입).
 - 스트리밍 없음. 한 질문에 수 초~십여 초.

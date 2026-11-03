@@ -127,6 +127,9 @@ def optimize_draws(
     pooled: bool = False,
     step: float = 0.001,
     max_iters: int = 5000,
+    objective: str = "mean",
+    q: float = 0.1,
+    offset=None,
 ):
     """Greedy step reallocation over posterior draws. Returns (shares, iters).
 
@@ -136,19 +139,28 @@ def optimize_draws(
     Each iteration takes the single donor->receiver step that raises the objective
     most and stops when no step helps. Intercept and aux do not depend on shares,
     so they are left out of the objective.
+    objective='quantile' (pooled only): maximize the q-quantile of total sales over draws
+    instead of the mean (downside-risk view). Which draws sit in the low tail depends on
+    intercept + aux, so pass offset (D,) = per-draw non-channel sales (draw_offsets).
     """
     # ponytail: local search from one start point; Hill with alpha > 1 is S-shaped, so
-    # this is a local optimum. Add multi-start if results depend on the start point.
+    # this is a local optimum. random_check (CLI check-optimum) tests it against random splits.
     channels = tuple(bundle["channels"])
     n = len(channels)
     lo = np.array([bounds[ch][0] for ch in channels], dtype=float)
     hi = np.array([bounds[ch][1] for ch in channels], dtype=float)
     if (lo > hi).any() or lo.sum() > 1.0 or hi.sum() < 1.0:
         raise ValueError("Bounds are infeasible: need lo <= hi and sum(lo) <= 1 <= sum(hi).")
-    params = _params(draws, bundle)
-    rows = 1 if pooled else len(draws)
     # Feasible start: lower bounds plus headroom-proportional remainder (equal split by default).
     start = lo + (1.0 - lo.sum()) * (hi - lo) / (hi - lo).sum()
+    if objective not in ("mean", "quantile"):
+        raise ValueError("objective must be 'mean' or 'quantile'.")
+    if objective == "quantile" and not 0.0 < q < 1.0:
+        raise ValueError("q must be in (0, 1).")
+    params = _params(draws, bundle)
+    if objective == "quantile" and pooled:
+        return _optimize_quantile(params, total, weeks, lo, hi, start, step, max_iters, q, offset)
+    rows = 1 if pooled else len(draws)
     shares = np.tile(start, (rows, 1))
 
     def value(sh):
@@ -173,3 +185,86 @@ def optimize_draws(
         shares[move, receiver[move]] += step
         shares[move, donor[move]] -= step
     return np.clip(shares, lo, hi), iters
+
+
+def _optimize_quantile(params, total, weeks, lo, hi, start, step, max_iters, q, offset):
+    """Same greedy search as optimize_draws, objective = q-quantile of per-draw total sales.
+
+    A quantile is not additive over channels, so every (receiver, donor) move is scored on
+    per-draw totals (D, C, C) before taking the quantile over draws.
+    """
+    n = len(lo)
+    offset = np.zeros(len(params[0])) if offset is None else np.asarray(offset, dtype=float)
+    shares = start[None, :].copy()
+    eye = np.eye(n, dtype=bool)
+    iters = 0
+    for iters in range(max_iters):
+        cur = channel_sales(params, shares, total, weeks)  # (D, C)
+        tot = offset + cur.sum(axis=1)
+        up = channel_sales(params, shares + step, total, weeks) - cur
+        down = cur - channel_sales(params, shares - step, total, weeks)
+        cand = tot[:, None, None] + up[:, :, None] - down[:, None, :]  # [draw, receiver, donor]
+        base = np.quantile(tot, q)
+        net = np.quantile(cand, q, axis=0) - base
+        net[~(shares[0] + step <= hi + 1e-12), :] = -np.inf
+        net[:, ~(shares[0] - step >= lo - 1e-12)] = -np.inf
+        net[eye] = -np.inf
+        receiver, donor = np.unravel_index(net.argmax(), net.shape)
+        if net[receiver, donor] <= 1e-9 * abs(base):
+            break
+        shares[0, receiver] += step
+        shares[0, donor] -= step
+    return np.clip(shares, lo, hi), iters
+
+
+def draw_offsets(draws, weeks: int, aux_mean) -> np.ndarray:
+    """Per-draw sales that do not depend on the split: intercept + aux over the horizon."""
+    out = np.array([d["intercept"] for d in draws], dtype=float)
+    if aux_mean is not None and draws and "gamma" in draws[0]:
+        out = out + np.array([np.asarray(aux_mean, dtype=float) @ np.asarray(d["gamma"]) for d in draws])
+    return weeks * out
+
+
+def objective_value(params, shares, total: float, weeks: int, objective="mean", q=0.1, offset=None) -> float:
+    """Pooled objective of one split: mean or q-quantile of per-draw sales (channel part + offset)."""
+    sales = channel_sales(params, shares, total, weeks).sum(axis=-1)
+    if offset is not None:
+        sales = sales + np.asarray(offset, dtype=float)
+    return float(sales.mean() if objective == "mean" else np.quantile(sales, q))
+
+
+def random_check(
+    draws, bundle, total: float, weeks: int, bounds: dict, shares,
+    n: int = 3000, seed: int = 0, objective: str = "mean", q: float = 0.1, offset=None,
+) -> dict:
+    """Local-optimum check: score n random feasible splits against `shares` on the same objective.
+
+    Splits are lo + (1 - sum(lo)) * Dirichlet(1), rejected when above hi, so they cover the
+    whole bounded simplex. With S-shaped Hill (alpha > 1) a greedy result can be local;
+    n_better > 0 means a better split exists.
+    """
+    channels = tuple(bundle["channels"])
+    lo = np.array([bounds[ch][0] for ch in channels], dtype=float)
+    hi = np.array([bounds[ch][1] for ch in channels], dtype=float)
+    params = _params(draws, bundle)
+    rng = np.random.default_rng(seed)
+    samples, tries = [], 0
+    while sum(len(s) for s in samples) < n:
+        tries += 1
+        if tries > 1000:
+            raise ValueError("Bounds too tight for rejection sampling of random splits.")
+        cand = lo + (1.0 - lo.sum()) * rng.dirichlet(np.ones(len(channels)), size=n)
+        samples.append(cand[(cand <= hi + 1e-12).all(axis=1)])
+    samples = np.concatenate(samples)[:n]
+    best = objective_value(params, np.asarray(shares, dtype=float).reshape(-1), total, weeks, objective, q, offset)
+    values = np.array([objective_value(params, s, total, weeks, objective, q, offset) for s in samples])
+    top = int(values.argmax())
+    return {
+        "n": n,
+        "seed": seed,
+        "objective_at_optimum": best,
+        "n_better": int((values > best + 1e-9 * abs(best)).sum()),
+        "max_improvement": float(values[top] - best),
+        "max_improvement_pct": float(100 * (values[top] / best - 1)) if best else 0.0,
+        "best_random_shares": dict(zip(channels, (float(v) for v in samples[top]))),
+    }
