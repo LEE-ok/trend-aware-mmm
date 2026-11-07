@@ -1,0 +1,423 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "source": {
+      "const": "data/raw/data_GIT.csv"
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenance": {
+      "const": "csv_computed"
+    },
+    "currency": {
+      "const": "USD"
+    },
+    "period": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date"
+        },
+        "end": {
+          "type": "string",
+          "format": "date"
+        },
+        "frequency": {
+          "const": "weekly"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "frequency"
+      ],
+      "additionalProperties": false
+    },
+    "validation_status": {
+      "const": "passed"
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "weeks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "train_weeks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "test_weeks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "channel_count": {
+          "const": 5
+        },
+        "spend_total": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "weeks",
+        "train_weeks",
+        "test_weeks",
+        "channel_count",
+        "spend_total"
+      ],
+      "additionalProperties": false
+    },
+    "privacy": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "const": "aggregate_only"
+        },
+        "weekly_rows_exported": {
+          "const": false
+        },
+        "weekly_series_enabled": {
+          "const": false
+        },
+        "raw_publication_approved": {
+          "const": false
+        },
+        "distribution_method": {
+          "const": "linear_quantiles"
+        }
+      },
+      "required": [
+        "scope",
+        "weekly_rows_exported",
+        "weekly_series_enabled",
+        "raw_publication_approved",
+        "distribution_method"
+      ],
+      "additionalProperties": false
+    },
+    "sales": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mean": {
+          "type": "number",
+          "minimum": 0
+        },
+        "min": {
+          "type": "number",
+          "minimum": 0
+        },
+        "q25": {
+          "type": "number",
+          "minimum": 0
+        },
+        "median": {
+          "type": "number",
+          "minimum": 0
+        },
+        "q75": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "total",
+        "mean",
+        "min",
+        "q25",
+        "median",
+        "q75",
+        "max"
+      ],
+      "additionalProperties": false
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "mdsp_dm",
+              "mdsp_so",
+              "mdsp_vidtr",
+              "mdsp_viddig",
+              "mdsp_sem"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "spend": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "minimum": 0
+              },
+              "mean": {
+                "type": "number",
+                "minimum": 0
+              },
+              "min": {
+                "type": "number",
+                "minimum": 0
+              },
+              "q25": {
+                "type": "number",
+                "minimum": 0
+              },
+              "median": {
+                "type": "number",
+                "minimum": 0
+              },
+              "q75": {
+                "type": "number",
+                "minimum": 0
+              },
+              "max": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total",
+              "mean",
+              "min",
+              "q25",
+              "median",
+              "q75",
+              "max"
+            ],
+            "additionalProperties": false
+          },
+          "share": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "pearson": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          },
+          "spearman": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          },
+          "zero_weeks": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "spend",
+          "share",
+          "pearson",
+          "spearman",
+          "zero_weeks"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "document_comparison": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "const": "docs/eda.md"
+        },
+        "provenance": {
+          "const": "document_comparison"
+        },
+        "rounding_note": {
+          "type": "string"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "metric": {
+                "type": "string"
+              },
+              "computed": {
+                "type": "number"
+              },
+              "recorded": {
+                "type": "number"
+              },
+              "tolerance": {
+                "type": "number",
+                "minimum": 0
+              },
+              "matches": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "metric",
+              "computed",
+              "recorded",
+              "tolerance",
+              "matches"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 36,
+          "maxItems": 36
+        },
+        "mismatch_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "source",
+        "provenance",
+        "rounding_note",
+        "checks",
+        "mismatch_count"
+      ],
+      "additionalProperties": false
+    },
+    "model_performance": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "const": "docs/bayes-run.md"
+        },
+        "run_date": {
+          "const": "2026-10-12"
+        },
+        "provenance": {
+          "const": "document_recorded"
+        },
+        "trace_verified": {
+          "const": false
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "enum": [
+                  "base",
+                  "trend"
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "test_mape": {
+                "type": "number",
+                "minimum": 0
+              },
+              "direction_accuracy": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "max_rhat": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "test_mape",
+              "direction_accuracy",
+              "max_rhat"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": [
+        "source",
+        "run_date",
+        "provenance",
+        "trace_verified",
+        "models"
+      ],
+      "additionalProperties": false
+    },
+    "availability": {
+      "type": "object",
+      "properties": {
+        "raw_csv": {
+          "type": "boolean"
+        },
+        "trace": {
+          "type": "boolean"
+        },
+        "model_summary": {
+          "type": "boolean"
+        },
+        "trend_csv": {
+          "type": "boolean"
+        },
+        "scenario_results": {
+          "type": "boolean"
+        },
+        "optimum_results": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "raw_csv",
+        "trace",
+        "model_summary",
+        "trend_csv",
+        "scenario_results",
+        "optimum_results"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "source",
+    "source_sha256",
+    "generated_at",
+    "provenance",
+    "currency",
+    "period",
+    "validation_status",
+    "summary",
+    "privacy",
+    "sales",
+    "channels",
+    "document_comparison",
+    "model_performance",
+    "availability"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

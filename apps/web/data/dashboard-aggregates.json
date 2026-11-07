@@ -1,0 +1,414 @@
+{
+  "schema_version": "1.0.0",
+  "source": "data/raw/data_GIT.csv",
+  "source_sha256": "f690896bf40e622f77b6498ae3e182e4d48dd17bc1dee74fe811e8e3c0ce8696",
+  "generated_at": "2026-11-07T14:23:32.807817+00:00",
+  "provenance": "csv_computed",
+  "currency": "USD",
+  "period": {
+    "start": "2014-08-03",
+    "end": "2018-07-29",
+    "frequency": "weekly"
+  },
+  "validation_status": "passed",
+  "summary": {
+    "weeks": 209,
+    "train_weeks": 183,
+    "test_weeks": 26,
+    "channel_count": 5,
+    "spend_total": 349566338.91
+  },
+  "privacy": {
+    "scope": "aggregate_only",
+    "weekly_rows_exported": false,
+    "weekly_series_enabled": false,
+    "raw_publication_approved": false,
+    "distribution_method": "linear_quantiles"
+  },
+  "sales": {
+    "total": 22583339975.1,
+    "mean": 108054258.25406699,
+    "min": 45316510.85,
+    "q25": 69709932.62,
+    "median": 99556654.51,
+    "q75": 119468400.59,
+    "max": 351597976.78
+  },
+  "channels": [
+    {
+      "id": "mdsp_dm",
+      "label": "DM · 우편",
+      "spend": {
+        "total": 158373363.44,
+        "mean": 757767.2891866029,
+        "min": 0.0,
+        "q25": 380885.17,
+        "median": 670909.25,
+        "q75": 1007081.94,
+        "max": 2409895.71
+      },
+      "share": 0.4530566756908911,
+      "pearson": 0.14853884265684994,
+      "spearman": 0.1065013933434986,
+      "zero_weeks": 1
+    },
+    {
+      "id": "mdsp_so",
+      "label": "SO · 소셜",
+      "spend": {
+        "total": 21320203.8,
+        "mean": 102010.54449760765,
+        "min": 0.0,
+        "q25": 35081.44,
+        "median": 70799.44,
+        "q75": 143463.91,
+        "max": 573355.55
+      },
+      "share": 0.06099043708407273,
+      "pearson": 0.33485886402754766,
+      "spearman": 0.15055913997975937,
+      "zero_weeks": 7
+    },
+    {
+      "id": "mdsp_vidtr",
+      "label": "VIDTR · TV",
+      "spend": {
+        "total": 35145152.07,
+        "mean": 168158.6223444976,
+        "min": 0.0,
+        "q25": 60290.77,
+        "median": 112353.17,
+        "q75": 218553.47,
+        "max": 1100083.38
+      },
+      "share": 0.1005392915679119,
+      "pearson": 0.656736864352484,
+      "spearman": 0.42893215854203753,
+      "zero_weeks": 3
+    },
+    {
+      "id": "mdsp_viddig",
+      "label": "VIDDIG · 디지털 영상",
+      "spend": {
+        "total": 3865647.98,
+        "mean": 18495.923349282297,
+        "min": 0.0,
+        "q25": 6840.09,
+        "median": 12991.09,
+        "q75": 24837.91,
+        "max": 104352.44
+      },
+      "share": 0.011058410234960457,
+      "pearson": 0.45838923995709885,
+      "spearman": 0.33245296225688026,
+      "zero_weeks": 3
+    },
+    {
+      "id": "mdsp_sem",
+      "label": "SEM · 검색",
+      "spend": {
+        "total": 130861971.62,
+        "mean": 626133.8355023924,
+        "min": 199757.92,
+        "q25": 355954.51,
+        "median": 485503.95,
+        "q75": 692021.67,
+        "max": 3134565.13
+      },
+      "share": 0.3743551854221638,
+      "pearson": 0.5864087209773982,
+      "spearman": 0.3316223250433777,
+      "zero_weeks": 0
+    }
+  ],
+  "document_comparison": {
+    "source": "docs/eda.md",
+    "provenance": "document_comparison",
+    "rounding_note": "정수 USD ±0.5, 상관계수 ±0.0005, 서술형 근사 만 단위 ±500 USD로 대조합니다.",
+    "checks": [
+      {
+        "metric": "sales.median",
+        "computed": 99556654.51,
+        "recorded": 99556655.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "sales.min",
+        "computed": 45316510.85,
+        "recorded": 45316511.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "sales.max",
+        "computed": 351597976.78,
+        "recorded": 351597977.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_dm.median",
+        "computed": 670909.25,
+        "recorded": 670909.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_dm.min",
+        "computed": 0.0,
+        "recorded": 0.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_dm.max",
+        "computed": 2409895.71,
+        "recorded": 2409896.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_dm.zero_weeks",
+        "computed": 1,
+        "recorded": 1.0,
+        "tolerance": 0,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_dm.pearson",
+        "computed": 0.14853884265684994,
+        "recorded": 0.149,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_dm.spearman",
+        "computed": 0.1065013933434986,
+        "recorded": 0.107,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_so.median",
+        "computed": 70799.44,
+        "recorded": 70799.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_so.min",
+        "computed": 0.0,
+        "recorded": 0.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_so.max",
+        "computed": 573355.55,
+        "recorded": 573356.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_so.zero_weeks",
+        "computed": 7,
+        "recorded": 7.0,
+        "tolerance": 0,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_so.pearson",
+        "computed": 0.33485886402754766,
+        "recorded": 0.335,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_so.spearman",
+        "computed": 0.15055913997975937,
+        "recorded": 0.151,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_vidtr.median",
+        "computed": 112353.17,
+        "recorded": 112353.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_vidtr.min",
+        "computed": 0.0,
+        "recorded": 0.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_vidtr.max",
+        "computed": 1100083.38,
+        "recorded": 1100083.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_vidtr.zero_weeks",
+        "computed": 3,
+        "recorded": 3.0,
+        "tolerance": 0,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_vidtr.pearson",
+        "computed": 0.656736864352484,
+        "recorded": 0.657,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_vidtr.spearman",
+        "computed": 0.42893215854203753,
+        "recorded": 0.429,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_viddig.median",
+        "computed": 12991.09,
+        "recorded": 12991.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_viddig.min",
+        "computed": 0.0,
+        "recorded": 0.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_viddig.max",
+        "computed": 104352.44,
+        "recorded": 104352.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_viddig.zero_weeks",
+        "computed": 3,
+        "recorded": 3.0,
+        "tolerance": 0,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_viddig.pearson",
+        "computed": 0.45838923995709885,
+        "recorded": 0.458,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_viddig.spearman",
+        "computed": 0.33245296225688026,
+        "recorded": 0.332,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_sem.median",
+        "computed": 485503.95,
+        "recorded": 485504.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_sem.min",
+        "computed": 199757.92,
+        "recorded": 199758.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_sem.max",
+        "computed": 3134565.13,
+        "recorded": 3134565.0,
+        "tolerance": 0.5,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_sem.zero_weeks",
+        "computed": 0,
+        "recorded": 0.0,
+        "tolerance": 0,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_sem.pearson",
+        "computed": 0.5864087209773982,
+        "recorded": 0.586,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_sem.spearman",
+        "computed": 0.3316223250433777,
+        "recorded": 0.332,
+        "tolerance": 0.0005,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_sem.prose.median",
+        "computed": 485503.95,
+        "recorded": 486000.0,
+        "tolerance": 500,
+        "matches": true
+      },
+      {
+        "metric": "mdsp_sem.prose.q25",
+        "computed": 355954.51,
+        "recorded": 365000.0,
+        "tolerance": 500,
+        "matches": false
+      },
+      {
+        "metric": "mdsp_sem.prose.q75",
+        "computed": 692021.67,
+        "recorded": 692000.0,
+        "tolerance": 500,
+        "matches": true
+      }
+    ],
+    "mismatch_count": 1
+  },
+  "model_performance": {
+    "source": "docs/bayes-run.md",
+    "run_date": "2026-10-12",
+    "provenance": "document_recorded",
+    "trace_verified": false,
+    "models": [
+      {
+        "id": "base",
+        "label": "Bayesian 기본",
+        "test_mape": 0.336,
+        "direction_accuracy": 0.4,
+        "max_rhat": 1.004
+      },
+      {
+        "id": "trend",
+        "label": "트렌드 결합",
+        "test_mape": 0.306,
+        "direction_accuracy": 0.36,
+        "max_rhat": 1.003
+      }
+    ]
+  },
+  "availability": {
+    "raw_csv": true,
+    "trace": false,
+    "model_summary": false,
+    "trend_csv": false,
+    "scenario_results": false,
+    "optimum_results": false
+  }
+}
