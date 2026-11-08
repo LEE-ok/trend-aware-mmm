@@ -1,0 +1,330 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "provenance": {
+      "const": "document_recorded"
+    },
+    "validation_status": {
+      "const": "passed"
+    },
+    "validation_scope": {
+      "const": "document_values_only"
+    },
+    "trace_verified": {
+      "const": false
+    },
+    "run_date": {
+      "const": "2026-10-12"
+    },
+    "currency": {
+      "const": "USD"
+    },
+    "amount_unit": {
+      "const": "hundred_million_usd"
+    },
+    "weeks": {
+      "const": 13
+    },
+    "interval_probability": {
+      "const": 0.8
+    },
+    "budget_million_usd": {
+      "const": 16.2
+    },
+    "channels": {
+      "const": [
+        "DM",
+        "SO",
+        "VIDTR",
+        "VIDDIG",
+        "SEM"
+      ]
+    },
+    "s0_shares_pct": {
+      "const": [
+        25.82,
+        13.21,
+        9.61,
+        1.08,
+        50.28
+      ]
+    },
+    "s0_share_source": {
+      "const": "docs/scenario.md"
+    },
+    "scenario_source": {
+      "const": "docs/scenario-results.md"
+    },
+    "optimization_source": {
+      "const": "docs/optimization.md"
+    },
+    "default_scenario_model": {
+      "const": "trend"
+    },
+    "default_optimization": {
+      "const": "trend_bounded"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "enum": [
+              "docs/scenario-results.md",
+              "docs/optimization.md",
+              "docs/scenario.md"
+            ]
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "scenario_models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "base",
+              "trend"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^S(?:0|[1-4]_(?:05|10|15))$"
+                },
+                "mean": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "interval": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "change_pct": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "extrapolation": {
+                  "type": "boolean"
+                },
+                "from_channel": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "to_channel": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "shift_pp": {
+                  "enum": [
+                    0,
+                    5,
+                    10,
+                    15
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "mean",
+                "interval",
+                "change_pct",
+                "extrapolation",
+                "from_channel",
+                "to_channel",
+                "shift_pp"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 13,
+            "maxItems": 13
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "scenarios"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "optimization_plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "base",
+              "trend",
+              "trend_bounded"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "shares_pct": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60
+            },
+            "minItems": 5,
+            "maxItems": 5
+          },
+          "mean": {
+            "type": "number",
+            "minimum": 0
+          },
+          "interval": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "s0_mean": {
+            "type": "number",
+            "minimum": 0
+          },
+          "s0_interval": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "paired_increment": {
+            "type": "number"
+          },
+          "paired_interval": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "change_pct": {
+            "type": "number"
+          },
+          "probability_positive": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "extrapolation": {
+            "type": "boolean"
+          },
+          "extrapolation_channel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bounds_pct": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "minItems": 5,
+            "maxItems": 5
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "shares_pct",
+          "mean",
+          "interval",
+          "s0_mean",
+          "s0_interval",
+          "paired_increment",
+          "paired_interval",
+          "change_pct",
+          "probability_positive",
+          "extrapolation",
+          "extrapolation_channel",
+          "bounds_pct"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 3,
+      "maxItems": 3
+    }
+  },
+  "required": [
+    "schema_version",
+    "provenance",
+    "validation_status",
+    "validation_scope",
+    "trace_verified",
+    "run_date",
+    "currency",
+    "amount_unit",
+    "weeks",
+    "interval_probability",
+    "budget_million_usd",
+    "channels",
+    "s0_shares_pct",
+    "s0_share_source",
+    "scenario_source",
+    "optimization_source",
+    "default_scenario_model",
+    "default_optimization",
+    "sources",
+    "scenario_models",
+    "optimization_plans"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

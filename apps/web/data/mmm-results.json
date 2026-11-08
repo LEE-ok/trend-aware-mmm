@@ -1,0 +1,556 @@
+{
+  "schema_version": "1.0.0",
+  "provenance": "document_recorded",
+  "validation_status": "passed",
+  "validation_scope": "document_values_only",
+  "trace_verified": false,
+  "run_date": "2026-10-12",
+  "sources": [
+    {
+      "path": "docs/scenario-results.md",
+      "sha256": "d1cd74de8554eb029ceb0ff8a8848e4026609ecc209561e48aab214d9394ab7f"
+    },
+    {
+      "path": "docs/optimization.md",
+      "sha256": "bad13a825b607a6ece5ee952d7bc52811e3fb6b9b9096b600b5d5de34894b4e8"
+    },
+    {
+      "path": "docs/scenario.md",
+      "sha256": "2751c57c79cfc8f0322b0d90a97823e7b27c87dd2121dcd186b2449a6871efcb"
+    }
+  ],
+  "currency": "USD",
+  "amount_unit": "hundred_million_usd",
+  "weeks": 13,
+  "interval_probability": 0.8,
+  "budget_million_usd": 16.2,
+  "channels": [
+    "DM",
+    "SO",
+    "VIDTR",
+    "VIDDIG",
+    "SEM"
+  ],
+  "s0_shares_pct": [
+    25.82,
+    13.21,
+    9.61,
+    1.08,
+    50.28
+  ],
+  "s0_share_source": "docs/scenario.md",
+  "scenario_source": "docs/scenario-results.md",
+  "optimization_source": "docs/optimization.md",
+  "default_scenario_model": "trend",
+  "default_optimization": "trend_bounded",
+  "scenario_models": [
+    {
+      "id": "base",
+      "label": "기본 모델",
+      "scenarios": [
+        {
+          "id": "S0",
+          "mean": 12.97,
+          "interval": [
+            11.53,
+            14.42
+          ],
+          "change_pct": null,
+          "extrapolation": false,
+          "from_channel": null,
+          "to_channel": null,
+          "shift_pp": 0
+        },
+        {
+          "id": "S1_05",
+          "mean": 14.42,
+          "interval": [
+            12.84,
+            16.01
+          ],
+          "change_pct": 11.2,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "VIDTR",
+          "shift_pp": 5
+        },
+        {
+          "id": "S1_10",
+          "mean": 15.42,
+          "interval": [
+            13.63,
+            17.19
+          ],
+          "change_pct": 18.9,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "VIDTR",
+          "shift_pp": 10
+        },
+        {
+          "id": "S1_15",
+          "mean": 16.12,
+          "interval": [
+            14.15,
+            18.05
+          ],
+          "change_pct": 24.3,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "VIDTR",
+          "shift_pp": 15
+        },
+        {
+          "id": "S2_05",
+          "mean": 13.44,
+          "interval": [
+            11.94,
+            14.93
+          ],
+          "change_pct": 3.6,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SEM",
+          "shift_pp": 5
+        },
+        {
+          "id": "S2_10",
+          "mean": 13.85,
+          "interval": [
+            12.29,
+            15.42
+          ],
+          "change_pct": 6.8,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SEM",
+          "shift_pp": 10
+        },
+        {
+          "id": "S2_15",
+          "mean": 14.22,
+          "interval": [
+            12.58,
+            15.84
+          ],
+          "change_pct": 9.7,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SEM",
+          "shift_pp": 15
+        },
+        {
+          "id": "S3_05",
+          "mean": 14.16,
+          "interval": [
+            12.39,
+            16.05
+          ],
+          "change_pct": 9.2,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "VIDDIG",
+          "shift_pp": 5
+        },
+        {
+          "id": "S3_10",
+          "mean": 14.36,
+          "interval": [
+            12.4,
+            16.42
+          ],
+          "change_pct": 10.7,
+          "extrapolation": true,
+          "from_channel": "DM",
+          "to_channel": "VIDDIG",
+          "shift_pp": 10
+        },
+        {
+          "id": "S3_15",
+          "mean": 14.38,
+          "interval": [
+            12.29,
+            16.52
+          ],
+          "change_pct": 10.9,
+          "extrapolation": true,
+          "from_channel": "DM",
+          "to_channel": "VIDDIG",
+          "shift_pp": 15
+        },
+        {
+          "id": "S4_05",
+          "mean": 13.02,
+          "interval": [
+            11.51,
+            14.52
+          ],
+          "change_pct": 0.4,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SO",
+          "shift_pp": 5
+        },
+        {
+          "id": "S4_10",
+          "mean": 13.02,
+          "interval": [
+            11.45,
+            14.56
+          ],
+          "change_pct": 0.4,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SO",
+          "shift_pp": 10
+        },
+        {
+          "id": "S4_15",
+          "mean": 12.98,
+          "interval": [
+            11.36,
+            14.58
+          ],
+          "change_pct": 0.1,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SO",
+          "shift_pp": 15
+        }
+      ]
+    },
+    {
+      "id": "trend",
+      "label": "trend 결합 모델",
+      "scenarios": [
+        {
+          "id": "S0",
+          "mean": 15.13,
+          "interval": [
+            13.71,
+            16.52
+          ],
+          "change_pct": null,
+          "extrapolation": false,
+          "from_channel": null,
+          "to_channel": null,
+          "shift_pp": 0
+        },
+        {
+          "id": "S1_05",
+          "mean": 15.95,
+          "interval": [
+            14.45,
+            17.44
+          ],
+          "change_pct": 5.4,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "VIDTR",
+          "shift_pp": 5
+        },
+        {
+          "id": "S1_10",
+          "mean": 16.49,
+          "interval": [
+            14.83,
+            18.14
+          ],
+          "change_pct": 9.0,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "VIDTR",
+          "shift_pp": 10
+        },
+        {
+          "id": "S1_15",
+          "mean": 16.83,
+          "interval": [
+            14.98,
+            18.65
+          ],
+          "change_pct": 11.3,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "VIDTR",
+          "shift_pp": 15
+        },
+        {
+          "id": "S2_05",
+          "mean": 15.32,
+          "interval": [
+            13.85,
+            16.74
+          ],
+          "change_pct": 1.2,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SEM",
+          "shift_pp": 5
+        },
+        {
+          "id": "S2_10",
+          "mean": 15.47,
+          "interval": [
+            13.94,
+            16.96
+          ],
+          "change_pct": 2.3,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SEM",
+          "shift_pp": 10
+        },
+        {
+          "id": "S2_15",
+          "mean": 15.59,
+          "interval": [
+            13.97,
+            17.15
+          ],
+          "change_pct": 3.0,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SEM",
+          "shift_pp": 15
+        },
+        {
+          "id": "S3_05",
+          "mean": 16.29,
+          "interval": [
+            14.51,
+            18.09
+          ],
+          "change_pct": 7.6,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "VIDDIG",
+          "shift_pp": 5
+        },
+        {
+          "id": "S3_10",
+          "mean": 16.47,
+          "interval": [
+            14.5,
+            18.47
+          ],
+          "change_pct": 8.9,
+          "extrapolation": true,
+          "from_channel": "DM",
+          "to_channel": "VIDDIG",
+          "shift_pp": 10
+        },
+        {
+          "id": "S3_15",
+          "mean": 16.49,
+          "interval": [
+            14.41,
+            18.61
+          ],
+          "change_pct": 9.0,
+          "extrapolation": true,
+          "from_channel": "DM",
+          "to_channel": "VIDDIG",
+          "shift_pp": 15
+        },
+        {
+          "id": "S4_05",
+          "mean": 15.12,
+          "interval": [
+            13.64,
+            16.53
+          ],
+          "change_pct": -0.1,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SO",
+          "shift_pp": 5
+        },
+        {
+          "id": "S4_10",
+          "mean": 15.07,
+          "interval": [
+            13.54,
+            16.52
+          ],
+          "change_pct": -0.4,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SO",
+          "shift_pp": 10
+        },
+        {
+          "id": "S4_15",
+          "mean": 14.99,
+          "interval": [
+            13.4,
+            16.49
+          ],
+          "change_pct": -0.9,
+          "extrapolation": false,
+          "from_channel": "DM",
+          "to_channel": "SO",
+          "shift_pp": 15
+        }
+      ]
+    }
+  ],
+  "optimization_plans": [
+    {
+      "id": "base",
+      "label": "기본 모델",
+      "shares_pct": [
+        0.2,
+        3.7,
+        30.8,
+        5.9,
+        59.4
+      ],
+      "mean": 18.2,
+      "interval": [
+        15.91,
+        20.35
+      ],
+      "s0_mean": 12.97,
+      "s0_interval": [
+        11.53,
+        14.42
+      ],
+      "paired_increment": 5.23,
+      "paired_interval": [
+        3.54,
+        6.91
+      ],
+      "change_pct": 40.4,
+      "probability_positive": 0.9995,
+      "extrapolation": false,
+      "extrapolation_channel": null,
+      "bounds_pct": [
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ]
+      ]
+    },
+    {
+      "id": "trend",
+      "label": "trend 결합 모델",
+      "shares_pct": [
+        1.2,
+        4.4,
+        32.0,
+        8.5,
+        53.9
+      ],
+      "mean": 18.35,
+      "interval": [
+        16.07,
+        20.63
+      ],
+      "s0_mean": 15.13,
+      "s0_interval": [
+        13.71,
+        16.52
+      ],
+      "paired_increment": 3.22,
+      "paired_interval": [
+        1.42,
+        4.97
+      ],
+      "change_pct": 21.3,
+      "probability_positive": 0.988,
+      "extrapolation": true,
+      "extrapolation_channel": "VIDDIG",
+      "bounds_pct": [
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ]
+      ]
+    },
+    {
+      "id": "trend_bounded",
+      "label": "trend + 운영 경계 · 최종 권고안",
+      "shares_pct": [
+        5.1,
+        4.1,
+        31.1,
+        8.2,
+        51.4
+      ],
+      "mean": 18.28,
+      "interval": [
+        16.1,
+        20.5
+      ],
+      "s0_mean": 15.13,
+      "s0_interval": [
+        13.71,
+        16.52
+      ],
+      "paired_increment": 3.15,
+      "paired_interval": [
+        1.43,
+        4.86
+      ],
+      "change_pct": 20.8,
+      "probability_positive": 0.993,
+      "extrapolation": false,
+      "extrapolation_channel": null,
+      "bounds_pct": [
+        [
+          5,
+          60
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          60
+        ],
+        [
+          0,
+          8.3
+        ],
+        [
+          0,
+          60
+        ]
+      ]
+    }
+  ]
+}
