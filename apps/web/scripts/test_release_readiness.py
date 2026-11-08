@@ -64,6 +64,13 @@ class ReleaseReadinessTests(unittest.TestCase):
         self.assertIn('모델 원본 산출물이 아닙니다', overview)
         for route in ['', 'eda']:
             self.assertIn('csv_computed', (WEB / 'out' / route / 'index.html').read_text(encoding='utf-8'))
+        for disclosure in ['데이터의 실제 생성자', '현재 시장 실적이 아닙니다', '본 프로젝트 전체에 MIT를 적용',
+                           'HTML·JS·RSC', '원본 주간 CSV 입력값', '/third-party/mmm-stan-LICENSE.txt']:
+            self.assertIn(disclosure, html)
+        notice = WEB / 'public/third-party/mmm-stan-LICENSE.txt'
+        self.assertEqual(hashlib.sha256(notice.read_bytes()).hexdigest(),
+                         '6f8030d496080b7b870bdf72f7c257edfac56ef3d8714c9aa455daba3810f21c')
+        self.assertEqual(notice.read_bytes(), (WEB / 'out/third-party/mmm-stan-LICENSE.txt').read_bytes())
 
     def test_static_bundle_has_no_raw_artifacts_credentials_or_host_paths(self):
         patterns = [

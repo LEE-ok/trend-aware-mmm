@@ -61,6 +61,7 @@ export default function MethodologyPage() {
     </Panel>
     <Panel title="출처 구분과 확인된 차이" note="CSV 재집계와 문서 기록값을 구분합니다. 현재 웹에서 모델 재학습·추정은 수행하지 않습니다.">
       <DataTable caption="웹 데이터의 출처·검증 범위" headings={["데이터", "출처 표식", "검증 범위"]} rows={[
+        ["원본 주간 CSV 입력값", "과거 관측 기록으로 사용하는 입력", "원본 행은 비공개 · 실제 수집·가공 경위는 별도 미확인"],
         ["Overview·EDA 집계", "csv_computed", "원본 해시·기술통계·상관계수 재계산"],
         ["모델 성능·시나리오·최적화", "document_recorded", "2026-10-12 확정런 문서 대조 · trace 미검증"],
         ["Simulator 사용자 배분", "사용자 입력의 산술 계산", "합계·센트 금액·운영 제약 · 모델 예측 아님"],
@@ -68,9 +69,12 @@ export default function MethodologyPage() {
       <p className="mt-4 text-sm leading-7 text-slate-600">SEM Q1은 CSV {number(Number(audit.sem_q1.csv_usd), 2)} USD와 문서 365,000 USD 사이에 {number(Number(audit.sem_q1.difference_usd), 2)} USD 차이가 있습니다. 통상 사분위수 계산법과 train/test 분할을 점검해도 문서값을 재현하지 못했습니다. 원인은 미확인으로 남기고 CSV 값과 기존 문서를 각각 유지합니다.</p>
       <p className="mt-3 text-sm leading-7 text-slate-600">최근 13주 실제 CSV 합계는 {number(Number(audit.recent_13_weeks_total_usd), 2)} USD(csv_computed), 문서 총액은 약 {results.budget_million_usd.toFixed(2)}M USD(document_recorded)입니다. 16,200,000 USD와 실제 합계의 차이는 {number(Math.abs(Number(audit.actual_minus_document_usd)), 2)} USD입니다. 기존 모델 기록과 Simulator 기본값은 문서 기준으로 유지하며, 이를 실제 집계의 정확값이라고 표시하지 않습니다.</p>
     </Panel>
-    <Panel title="공개 출처·라이선스 및 남은 확인" note="확인일: 2026-11-08 · 원본 CSV와 행별 시계열은 정적 사이트에 포함하지 않습니다.">
+    <Panel title="공개 출처·라이선스 및 남은 확인" note="권리 재점검: 2026-11-09 · 원본 CSV와 행별 시계열은 정적 사이트에 포함하지 않습니다.">
       <p className="text-sm leading-7 text-slate-600">공개 저장소 <a href="https://github.com/sibylhe/mmm_stan/blob/main/data.csv" className="font-semibold text-teal-800 underline">sibylhe/mmm_stan의 data.csv</a>가 로컬 원본과 SHA-256 기준 바이트 단위로 일치합니다. 해당 저장소에는 <a href="https://github.com/sibylhe/mmm_stan/blob/main/LICENSE" className="font-semibold text-teal-800 underline">MIT 라이선스</a>가 있으며 저작권자는 Sibyl He(2021)로 표시되어 있습니다.</p>
       <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-950">데이터 자체의 별도 이용·재배포 허락과 최초 수집 출처는 미확인입니다. 저장소의 MIT 표시만으로 데이터 공개 권한을 확정하지 않습니다. 집계와 모델 결과의 공개 범위 및 필요한 저작권 고지를 공개 전 확인해야 합니다.</p>
+      <p className="mt-3 text-sm leading-7 text-slate-600">원본 README는 209주 매출·매체 노출·지출 기록을 설명하지만, 데이터의 실제 생성자·최초 수집 기관·제3자 권리나 별도 허락은 명시하지 않습니다. 업로더와 LICENSE의 저작권 표시만으로 데이터 권리자를 단정하지 않습니다. 분석 기간은 2014~2018년이며 현재 시장 실적이 아닙니다.</p>
+      <p className="mt-3 text-sm leading-7 text-slate-600">MIT 원문은 소프트웨어와 관련 문서에 대한 허락 및 저작권·허락 고지 유지 조건을 담고 있습니다. <a href="/third-party/mmm-stan-LICENSE.txt" className="font-semibold text-teal-800 underline">저작권·허락·면책 문구를 포함한 MIT 원문 고지</a>를 그대로 보존했습니다. 이는 데이터 또는 파생 통계의 게시 허락을 새로 부여하거나 본 프로젝트 전체에 MIT를 적용한다는 뜻이 아닙니다.</p>
+      <p className="mt-3 text-sm leading-7 text-slate-600">자체 작성한 분석 코드·화면의 권리와 입력 데이터의 권리는 구분해야 합니다. CSV 집계값과 문서에 기록된 모델 추정 결과는 직접 만든 결과라도 원본 데이터에 기반하므로 공개 가능 여부를 별도로 확인해야 합니다. 집계·시나리오·최적화 수치는 HTML·JS·RSC에 포함되어 읽힐 수 있으며 원본 CSV를 제외해도 이 공개가 차단되지는 않습니다.</p>
       <p className="mt-3 text-sm leading-7 text-slate-600">본 프로젝트의 모델은 위 저장소의 구현을 그대로 설명하는 것이 아니라 기존 Python 코드의 가산형 Bayesian MMM입니다. 시각화된 추정치는 관측자료와 모델 가정에 따른 결과이며 실제 집행 성과와 구분해야 합니다.</p>
     </Panel>
     <Panel title="분석 근거 문서" note="모델 수치는 각 문서의 2026-10-12 확정런 절을 사용하며 이전 실행 이력과 혼용하지 않습니다.">
