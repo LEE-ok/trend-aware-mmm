@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "source": "data/raw/data_GIT.csv",
+  "source_sha256": "f690896bf40e622f77b6498ae3e182e4d48dd17bc1dee74fe811e8e3c0ce8696",
+  "provenance": "csv_computed",
+  "validation_scope": "aggregate_arithmetic_only",
+  "currency": "USD",
+  "recent_13_weeks_total_usd": "16195402.79",
+  "document_budget_usd": "16200000.00",
+  "document_budget_provenance": "document_recorded",
+  "document_budget_source": "docs/scenario.md",
+  "actual_minus_document_usd": "-4597.21",
+  "sem_q1": {
+    "csv_usd": "355954.51",
+    "document_usd": "365000.00",
+    "difference_usd": "9045.49",
+    "source": "docs/eda.md",
+    "cause": "unconfirmed"
+  },
+  "publication_review": {
+    "checked_on": "2026-11-08",
+    "matching_public_file": "https://github.com/sibylhe/mmm_stan/blob/main/data.csv",
+    "public_file_sha256": "f690896bf40e622f77b6498ae3e182e4d48dd17bc1dee74fe811e8e3c0ce8696",
+    "repository_license": "MIT",
+    "license_url": "https://github.com/sibylhe/mmm_stan/blob/main/LICENSE",
+    "dataset_redistribution_status": "unconfirmed"
+  }
+}

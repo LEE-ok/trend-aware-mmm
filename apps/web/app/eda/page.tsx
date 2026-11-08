@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "탐색적 분석" };
 export default function EdaPage() {
   return <div className="mx-auto max-w-6xl space-y-7">
     <AnalysisHeading english="EDA" title="탐색적 분석">매출과 광고비의 규모·분포·동시 상관관계를 전체 기간 집계로 살펴봅니다. 개별 주간 관측값이나 날짜별 매출은 공개하지 않습니다.</AnalysisHeading>
-    <SourceLabel>CSV 직접 계산 · {periodLabel} · {d.summary.weeks}주 · USD</SourceLabel>
+    <SourceLabel>csv_computed · CSV 직접 계산 · {periodLabel} · {d.summary.weeks}주 · USD</SourceLabel>
     <div className="grid gap-4 sm:grid-cols-3">
       <Metric label="주간 매출 평균" value={`${number(d.sales.mean / 1e6, 2)} 백만 USD`} note="전체 209주 평균 · 소수 둘째 자리 반올림" />
       <Metric label="주간 매출 중앙값" value={`${number(d.sales.median / 1e6, 2)} 백만 USD`} note="Q2 · 전체 관측값의 가운데 값" />

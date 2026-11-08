@@ -83,7 +83,7 @@ export function BudgetSimulator({ config }: { config: SimulatorConfig }) {
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
             <XAxis dataKey="channel" tick={{ fontSize: 11 }} /><YAxis domain={[0, 100]} width={44} tick={{ fontSize: 11 }} unit="%" />
             <Tooltip formatter={value => `${Number(value).toFixed(2)}%`} /><Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="s0" name="기존 S0" fill="#94a3b8" maxBarSize={32} isAnimationActive={false} />
+            <Bar dataKey="s0" name="기존 S0" fill="#64748b" maxBarSize={32} isAnimationActive={false} />
             <Bar dataKey="draft" name="사용자 입력" fill="#0f766e" maxBarSize={32} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>

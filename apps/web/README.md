@@ -1,6 +1,7 @@
 # Trend-aware MMM 웹 대시보드
 
-M0: 한국어 공통 레이아웃과 안내 페이지. M1: Overview·EDA에 집계 JSON을 연결했습니다.
+M0: 공통 레이아웃과 6개 경로. M1: Overview·EDA 집계. M2: Scenarios·Optimization 문서 결과.
+M3: 예산 배분 설계 Simulator. M4: Methodology, 통합 QA와 배포 준비.
 웹은 원본 CSV나 모델 파일을 직접 읽지 않습니다.
 Node.js 24 LTS 및 npm을 기준으로 합니다. 기존 Python 프로젝트와 독립적으로 실행합니다.
 
@@ -16,7 +17,8 @@ npm.cmd run dev
 PowerShell 실행 정책이 npm.ps1을 차단하는 환경에서는 위와 같이 npm.cmd를 사용합니다.
 
 경로: `/`, `/eda/`, `/scenarios/`, `/optimization/`, `/simulator/`, `/methodology/`.
-Simulator는 모델 결과 확보 안내만 제공합니다.
+Simulator는 예산 배분 산술 계산·운영 제약 검사만 수행합니다. 모델 예측 기능은 비활성화입니다.
+데이터·기능 계약은 `M2.md`, `M3.md`, 배포 전 점검과 QA 결과는 `M4.md`를 참고하세요.
 
 `output: 'export'`로 빌드하며 정적 결과는 `out/`에 생성됩니다.
 정적 파일 서버에서 `out/`을 제공하면 별도 Node.js/Python 서버가 필요하지 않습니다.

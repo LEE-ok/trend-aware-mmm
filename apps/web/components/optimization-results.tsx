@@ -28,7 +28,7 @@ export function OptimizationResults() {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
               <XAxis dataKey="channel" tick={{ fontSize: 11 }} /><YAxis domain={[0, 60]} width={40} tick={{ fontSize: 11 }} unit="%" />
               <Tooltip formatter={value => `${fixed(Number(value), 2)}%`} /><Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="baseline" name="기존 S0" fill="#94a3b8" maxBarSize={32} isAnimationActive={false} />
+              <Bar dataKey="baseline" name="기존 S0" fill="#64748b" maxBarSize={32} isAnimationActive={false} />
               <Bar dataKey="optimized" name="기대최적 배분" fill="#0f766e" maxBarSize={32} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>

@@ -6,11 +6,11 @@ export default function OverviewPage() {
   const available = [
     ["원본 CSV", d.availability.raw_csv], ["Bayesian trace", d.availability.trace],
     ["모델 요약 JSON", d.availability.model_summary], ["트렌드 CSV", d.availability.trend_csv],
-    ["시나리오 JSON", d.availability.scenario_results], ["최적화 JSON", d.availability.optimum_results],
+    ["시나리오 원본 산출물 JSON", d.availability.scenario_results], ["최적화 원본 산출물 JSON", d.availability.optimum_results],
   ] as const;
   return <div className="mx-auto max-w-6xl space-y-7">
     <AnalysisHeading english="Overview" title="분석 개요">과거 미국 리테일 데이터를 바탕으로 마케팅 예산 분석의 근거와 한계를 살펴봅니다. CSV 집계값과 문서에 기록된 모델 성능을 구분해 제공합니다.</AnalysisHeading>
-    <SourceLabel>원본 CSV 직접 집계 · 주간 형식 검증 통과</SourceLabel>
+    <SourceLabel>csv_computed · 원본 CSV 직접 집계 · 주간 형식 검증 통과</SourceLabel>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Metric label="분석 데이터" value={`${d.summary.weeks}주`} note={periodLabel} />
       <Metric label="광고 채널" value={`${d.summary.channel_count}개`} note="DM · SO · VIDTR · VIDDIG · SEM" />
@@ -34,8 +34,9 @@ export default function OverviewPage() {
         <DataTable caption="전체 209주 매출의 기술통계" headings={["통계", "USD"]} rows={[["평균", number(d.sales.mean, 2)], ["중앙값", number(d.sales.median, 2)], ["최솟값", number(d.sales.min, 2)], ["최댓값", number(d.sales.max, 2)]]} />
         <Link href="/eda/" className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-teal-800 underline underline-offset-4">채널별 집계와 분포 살펴보기 →</Link>
       </Panel>
-      <Panel title="데이터·모델 파일 확보 상태" note="집계 JSON 생성 시 로컬 파일 존재 여부를 확인한 결과입니다. 존재 여부와 모델 검증 완료는 다릅니다.">
+      <Panel title="데이터·모델 파일 확보 상태" note="M1 집계 생성 당시 모델 원본 파일 존재 여부입니다. M2 문서 기록 JSON과 구분하며 현재 산출물 재현 검증을 뜻하지 않습니다.">
         <ul className="divide-y divide-slate-100">{available.map(([label, exists]) => <li key={label} className="flex items-center justify-between gap-3 py-3 text-sm"><span className="text-slate-700">{label}</span><span className={`rounded-md px-2 py-1 text-xs font-medium ${exists ? 'bg-teal-50 text-teal-800' : 'bg-slate-100 text-slate-600'}`}>{exists ? '확보 · 형식 검증 완료' : '미확보'}</span></li>)}</ul>
+        <p className="mt-4 text-xs leading-6 text-slate-600">M2 시나리오·최적화 화면은 별도의 mmm-results.json에 저장한 document_recorded 문서 기록값을 사용합니다. 이 JSON은 모델 원본 산출물이 아닙니다.</p>
       </Panel>
     </div>
     <Panel title="출처와 공개 범위" note="집계 데이터만 웹 빌드에 사용합니다. 원본 CSV와 날짜별 관측값은 포함하지 않습니다.">

@@ -14,8 +14,8 @@ export function SpendChart({ channels }: { channels: Channel[] }) {
     <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 288 }}>
       <BarChart data={data} margin={{ top: 10, right: 12, bottom: 26, left: 0 }} accessibilityLayer>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-        <XAxis dataKey="name" tick={axis} label={{ value: "광고 채널", position: "bottom", offset: 6, fontSize: 11 }} />
-        <YAxis tick={axis} width={46} label={{ value: "백만 USD", angle: -90, position: "insideLeft", fontSize: 10 }} />
+        <XAxis dataKey="name" tick={axis} label={{ value: "광고 채널", position: "bottom", offset: 6, fontSize: 11, fill: "#475569" }} />
+        <YAxis tick={axis} width={46} label={{ value: "백만 USD", angle: -90, position: "insideLeft", fontSize: 10, fill: "#475569" }} />
         <Tooltip formatter={v => [`${Number(v).toLocaleString("ko-KR", { maximumFractionDigits: 2 })} 백만 USD`, "누적 광고비"]} />
         <Bar dataKey="spend" fill="#0f766e" radius={[5, 5, 0, 0]} maxBarSize={54} isAnimationActive={false} />
       </BarChart>
@@ -30,11 +30,11 @@ export function CorrelationChart({ channels }: { channels: Channel[] }) {
       <BarChart data={data} margin={{ top: 5, right: 10, bottom: 20, left: 0 }} accessibilityLayer>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
         <XAxis dataKey="name" tick={axis} />
-        <YAxis domain={[-1, 1]} tick={axis} width={46} label={{ value: "상관계수", angle: -90, position: "insideLeft", fontSize: 10 }} />
+        <YAxis domain={[-1, 1]} tick={axis} width={46} label={{ value: "상관계수", angle: -90, position: "insideLeft", fontSize: 10, fill: "#475569" }} />
         <ReferenceLine y={0} stroke="#94a3b8" /><Tooltip formatter={v => Number(v).toFixed(3)} />
         <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
         <Bar dataKey="Pearson" name="Pearson · 선형" fill="#0f766e" maxBarSize={26} radius={[3, 3, 0, 0]} isAnimationActive={false} />
-        <Bar dataKey="Spearman" name="Spearman · 순위" fill="#818cf8" maxBarSize={26} radius={[3, 3, 0, 0]} isAnimationActive={false} />
+        <Bar dataKey="Spearman" name="Spearman · 순위" fill="#4f46e5" maxBarSize={26} radius={[3, 3, 0, 0]} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   </div>;
@@ -46,8 +46,8 @@ export function DistributionChart({ stats, label }: { stats: Distribution; label
     <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 256 }}>
       <BarChart data={data} margin={{ top: 6, right: 10, bottom: 25, left: 0 }} accessibilityLayer>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-        <XAxis dataKey="name" tick={axis} interval={0} label={{ value: "분포 요약 통계", position: "bottom", fontSize: 11, offset: 6 }} />
-        <YAxis tick={axis} width={46} label={{ value: "백만 USD", angle: -90, position: "insideLeft", fontSize: 10 }} />
+        <XAxis dataKey="name" tick={axis} interval={0} label={{ value: "분포 요약 통계", position: "bottom", fontSize: 11, offset: 6, fill: "#475569" }} />
+        <YAxis tick={axis} width={46} label={{ value: "백만 USD", angle: -90, position: "insideLeft", fontSize: 10, fill: "#475569" }} />
         <Tooltip formatter={v => [`${Number(v).toLocaleString("ko-KR", { maximumFractionDigits: 3 })} 백만 USD`, label]} />
         <Bar dataKey="value" fill="#475569" maxBarSize={46} radius={[4, 4, 0, 0]} isAnimationActive={false} />
       </BarChart>
